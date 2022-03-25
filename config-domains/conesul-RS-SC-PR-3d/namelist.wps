@@ -1,0 +1,81 @@
+&share
+ wrf_core = 'ARW',
+ max_dom = 3,
+ start_date = '2022-02-05_00:00:00', '2022-02-05_00:00:00', '2022-02-05_00:00:00', 
+ end_date   = '2022-02-05_12:00:00', '2022-02-05_12:00:00', '2022-02-05_12:00:00', 
+ interval_seconds = 21600,
+ io_form_geogrid = 2,
+ opt_output_from_geogrid_path = '/home/cirrus/bin/WRF-domains/conesul-RS-SC-PR-3d/',
+ debug_level = 0,
+/
+
+&geogrid
+ parent_id         = 1,1,2,
+ parent_grid_ratio = 1,3,3,
+ i_parent_start    = 1,15,70,
+ j_parent_start    = 1,49,75,
+ e_we          = 100,214,367,
+ e_sn          = 140,205,307,
+ geog_data_res = '5m','2m','30s',
+ dx = 18000,
+ dy = 18000,
+ map_proj =  'lambert',
+ ref_lat   = -31.41,
+ ref_lon   = -53.435,
+ truelat1  = -31.41,
+ truelat2  = -31.41,
+ stand_lon = -53.435,
+ geog_data_path = '/home/cirrus/bin/WPS_GEOG',
+ opt_geogrid_tbl_path = '/home/cirrus/bin/WRF-domains/conesul-RS-SC-PR-3d/',
+ ref_x = 50.0,
+ ref_y = 70.0,
+/
+
+&ungrib
+ out_format = 'WPS',
+ prefix = 'FILE',
+/
+
+&metgrid
+ fg_name = 'FILE',
+ io_form_metgrid = 2,
+ opt_output_from_metgrid_path = '/home/cirrus/bin/WRF-domains/conesul-RS-SC-PR-3d/',
+ opt_metgrid_tbl_path = '/home/cirrus/bin/WRF-domains/conesul-RS-SC-PR-3d/',
+/
+
+&mod_levs
+ press_pa = 201300 , 200100 , 100000 ,
+             95000 ,  90000 ,
+             85000 ,  80000 ,
+             75000 ,  70000 ,
+             65000 ,  60000 ,
+             55000 ,  50000 ,
+             45000 ,  40000 ,
+             35000 ,  30000 ,
+             25000 ,  20000 ,
+             15000 ,  10000 ,
+              5000 ,   1000
+ /
+
+
+&domain_wizard
+ grib_data_path = '/home/cirrus/bin/data',
+ grib_vtable = 'Vtable.GFS',
+ dwiz_name    =conesul-RS-SC-PR-3d
+ dwiz_desc    =
+ dwiz_user_rect_x1 =1316
+ dwiz_user_rect_y1 =1238
+ dwiz_user_rect_x2 =1533
+ dwiz_user_rect_y2 =1495
+ dwiz_show_political =true
+ dwiz_center_over_gmt =true
+ dwiz_latlon_space_in_deg =10
+ dwiz_latlon_linecolor =-8355712
+ dwiz_map_scale_pct =25.0
+ dwiz_map_vert_scrollbar_pos =1056
+ dwiz_map_horiz_scrollbar_pos =1056
+ dwiz_gridpt_dist_km =18.0
+ dwiz_mpi_command =
+ dwiz_tcvitals =null
+ dwiz_bigmap =Y
+/

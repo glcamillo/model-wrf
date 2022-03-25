@@ -1,0 +1,13 @@
+ &lapsparms_nl
+
+ c6_maproj='lambrt',
+ standard_latitude=-28.432600000000008,
+ standard_latitude2=-28.432600000000008,
+ standard_longitude=-52.146119999999996,
+ grid_cen_lat=-28.0,
+ grid_cen_lon=-52.0,
+ grid_spacing_m=2000,
+ NX_L=113,
+ NY_L=99,
+
+ /

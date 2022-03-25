@@ -1,0 +1,198 @@
+
+2022-02-12  atualização e geração das grades
+
+- americasul-r_norte-MA-3d - MARANHÃO (ALCÂNTARA):  2,5 S / 44,5 W
+grade         pontos       resol(km)     resol(graus)    resol_dados_geo(graus,min,s)
+d1:166x188    31.208         27         0,1762x0,1698       10m
+d2:154x178    27.412          9       0,05876x0,05662        2m
+d3:142x166    23.572          3       0,01959x0,01887       30s
+
+
+- americasul-r_sudeste-SP-sjcampos-3d  - SÃO PAULO - São Jose dos Campos: 23,33 S / 44,80 W
+
+grade         pontos       resol(km)     resol(graus)    resol_dados_geo(graus,min,s)
+d1:166x188    31.208         36         0,2379x0,2379            10m
+d2:166x190    31.540         12        0,0793x0,07446             2m
+d3:163x190    30.970          4       0,02643x0,02482            30s
+
+
+
+- conesul-RS-SC-PR-3d - RIO GRANDE DO SUL:  31,41 S / 53,435 W
+
+grade         pontos       resol(km)     resol(graus)    resol_dados_geo(graus,min,s)
+d1:100x140    14.000         18          0,1159x0,1148             5m
+d2:213x204    43.870          6         0,03864x0,3828             2m
+d3:366x306   112.669          2         0,01288x0,1276            30s
+
+
+
+- r_norte-MA-2d-high  - MARANHÃO (ALCÂNTARA):  2,5 S / 44,5 W
+
+grade         pontos       resol(km)     resol(graus)    resol_dados_geo(graus,min,s)
+d1:100x80     8.000          18          0,1155x0,1152           5m
+d2:64x49      3.136           6         0,03852x0,0384           2m
+
+
+- r_norte-r_nordeste-MA-2d-low - MARANHÃO (ALCÂNTARA):  2,5 S / 44,5 W
+
+grade         pontos       resol(km)     resol(graus)    resol_dados_geo(graus,min,s)
+d1:100x80       8.000           36          0,2321x0,2293         10m
+d2:63x49        3.136           12        0,07739x0,07646         5m
+
+
+- r_sudeste-SP-MG-PR-MS-2d - SÃO PAULO (BAURU): 30,477 S / 53,302 W
+
+grade         pontos       resol(km)     resol(graus)    resol_dados_geo(graus,min,s)
+d1:150x160    24.000        10            0,0642x0,0639            2m
+d2:380x360   136.800         2           0,01284x0,0128           30s 
+
+
+- r_sul-RS-SC-2d - RIO GRANDE DO SUL, SANTA CATARINA, PARANÁ: 30,477 S / 53,302 W
+
+grade         pontos       resol(km)     resol(graus)    resol_dados_geo(graus,min,s)
+d1:150x160    24.000      10            0,0642x0,0639            2m
+d2:391x371   145.061       2           0,01284x0,0128           30s 
+
+
+
+- r_sul-SC-2d-high - SANTA CATARINA:  28,921 S / 53,524 W
+
+grade         pontos       resol(km)     resol(graus)    resol_dados_geo(graus,min,s)
+d1:298x277    82.546      5           0,032x0,032                        2m
+d2:751x516   387.516      1           0,00642x0,00642                   30s
+
+
+- santa-catarina-1d-high - SANTA CATARINA:  27,322 S / 51,746 W
+
+grade         pontos       resol(km)     resol(graus)    resol_dados_geo(graus,min,s)
+d1:751x516   383.761          1         0,0064x0,0064            30s
+
+
+- santa-catarina-1d-high-small - SANTA CATARINA:  27,322 S / 51,2 W
+
+grade         pontos       resol(km)     resol(graus)    resol_dados_geo(graus,min,s)
+d1:560x420   235.200          1         0,0064x0,0064            30s
+
+
+- santa-catarina-1d-low-small - SANTA CATARINA:  27,322 S / 51,746 W
+
+grade         pontos       resol(km)     resol(graus)    resol_dados_geo(graus,min,s)
+d1:370x250    92.500          2         0,0128x0,0128            30s
+
+
+
+
+
+
+
+
+
+10min:18,4756
+5min:9,23
+2min:3,695
+30s:0,5542
+
+53
+29,45
+
+
+
+================================================================
+
+
+
+
+
+
+
+
+
+- conesul-RS-SC-PR-3d - RIO GRANDE DO SUL:  31,41 S / 53,435 W
+
+grade         pontos       resol(km)     resol(graus)    resol_dados_geo(graus,min,s)
+d1:100x140    14.000         18          0,1159x0,1148             5m
+d2:214x204    43.870          6         0,03864x0,3828             2m
+d3:366x306   112.669          2         0,01288x0,1276            30s
+
+
+
+- r_sul-RS-SC-2d - RIO GRANDE DO SUL, SANTA CATARINA, PARANÁ: 30,477 S / 53,302 W
+
+grade         pontos       resol(km)     resol(graus)    resol_dados_geo(graus,min,s)
+d1:150x160    24.000      10            0,0642x0,0639            2m
+d2:391x371   145.061       2           0,01284x0,0128           30s 
+
+
+
+- r_sul-SC-2d-high - SANTA CATARINA:  28,921 S / 53,524 W
+
+grade         pontos       resol(km)     resol(graus)    resol_dados_geo(graus,min,s)
+d1:298x277    82.546      5           0,032x0,032                        2m
+d2:751x516   387.516      1           0,00642x0,00642                   30s
+
+
+- santa-catarina-1d-high - SANTA CATARINA:  27,322 S / 51,746 W
+
+grade         pontos       resol(km)     resol(graus)    resol_dados_geo(graus,min,s)
+d1:751x516   383.761          1         0,0064x0,0064            30s
+
+
+- santa-catarina-1d-high-small - SANTA CATARINA:  27,322 S / 51,2 W
+
+grade         pontos       resol(km)     resol(graus)    resol_dados_geo(graus,min,s)
+d1:560x420   235.200          1         0,0064x0,0064            30s
+
+
+- santa-catarina-1d-low-small - SANTA CATARINA:  27,322 S / 51,746 W
+
+grade         pontos       resol(km)     resol(graus)    resol_dados_geo(graus,min,s)
+d1:370x250    92.500          2         0,0128x0,0128            30s
+
+
+
+
+- r_sudeste-SP-MG-PR-MS-2d - SÃO PAULO (BAURU): 30,477 S / 53,302 W
+
+grade         pontos       resol(km)     resol(graus)    resol_dados_geo(graus,min,s)
+d1:150x160    24.000        10            0,0642x0,0639            2m
+d2:380x360   136.800         2           0,01284x0,0128           30s 
+
+
+
+
+- americasul-r_sudeste-SP-sjcampos-3d  - SÃO PAULO - São Jose dos Campos: 23,33 S / 44,80 W
+
+grade         pontos       resol(km)     resol(graus)    resol_dados_geo(graus,min,s)
+d1:166x188    31.208         36         0,2379x0,2379            10m
+d2:166x190    31.540         12        0,0793x0,07446             2m
+d3:163x190    30.970          4       0,02643x0,02482            30s
+
+
+
+
+- americasul-r_norte-MA-3d - MARANHÃO (ALCÂNTARA):  2,5 S / 44,5 W
+grade         pontos       resol(km)     resol(graus)    resol_dados_geo(graus,min,s)
+d1:166x188    31.208         27         0,1762x0,1698       10m
+d2:154x178    27.412          9       0,05876x0,05662        2m
+d3:142x166    23.572          3       0,01959x0,01887       30s
+
+
+
+- r_norte-r_nordeste-MA-2d-low - MARANHÃO (ALCÂNTARA):  2,5 S / 44,5 W
+
+grade         pontos       resol(km)     resol(graus)    resol_dados_geo(graus,min,s)
+d1:100x80       8.000           36          0,2321x0,2293         10m
+d2:64x49        3.136           12        0,07739x0,07646         5m
+
+
+
+
+
+- r_norte-MA-2d-high  - MARANHÃO (ALCÂNTARA):  2,5 S / 44,5 W
+
+grade         pontos       resol(km)     resol(graus)    resol_dados_geo(graus,min,s)
+d1:100x80     8.000          18          0,1155x0,1152           5m
+d2:64x49      3.136           6         0,03852x0,0384           2m
+
+
+

@@ -1,0 +1,429 @@
+Parsed 29 entries in GEOGRID.TBL
+Processing domain 1 of 2
+  Processing XLAT and XLONG
+  Processing MAPFAC
+  Processing F and E
+  Processing ROTANG
+  Processing LANDUSEF
+  Calculating landmask from LANDUSEF ( WATER =  17  21 )
+  Processing HGT_M
+  Processing SOILTEMP
+  Processing SOILCTOP
+  Processing SCT_DOM
+  Processing SOILCBOT
+  Processing SCB_DOM
+  Processing ALBEDO12M
+  Processing GREENFRAC
+  Processing LAI12M
+  Processing SNOALB
+  Processing CON
+  Processing VAR
+  Processing OA1
+  Processing OA2
+  Processing OA3
+  Processing OA4
+  Processing OL1
+  Processing OL2
+  Processing OL3
+  Processing OL4
+  Processing VAR_SSO
+
+  Optional fields not processed by geogrid:
+    LAKE_DEPTH (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/lake_depth/')
+    URB_PARAM (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/NUDAPT44_1km/')
+    FRC_URB2D (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/urbfrac_nlcd2011/')
+    IMPERV (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/nlcd2011_imp_ll_9s/')
+    CANFRA (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/nlcd2011_can_ll_9s/')
+    EROD (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/erod/')
+    CLAYFRAC (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/clayfrac_5m/')
+    SANDFRAC (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/sandfrac_5m/')
+    IRRIGATION (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/irrigation/fao/')
+
+Processing domain 2 of 2
+  Processing XLAT and XLONG
+  Processing MAPFAC
+  Processing F and E
+  Processing ROTANG
+  Processing LANDUSEF
+  Calculating landmask from LANDUSEF ( WATER =  17  21 )
+  Processing HGT_M
+  Processing SOILTEMP
+  Processing SOILCTOP
+  Processing SCT_DOM
+  Processing SOILCBOT
+  Processing SCB_DOM
+  Processing ALBEDO12M
+  Processing GREENFRAC
+  Processing LAI12M
+  Processing SNOALB
+  Processing CON
+  Processing VAR
+  Processing OA1
+  Processing OA2
+  Processing OA3
+  Processing OA4
+  Processing OL1
+  Processing OL2
+  Processing OL3
+  Processing OL4
+  Processing VAR_SSO
+
+  Optional fields not processed by geogrid:
+    LAKE_DEPTH (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/lake_depth/')
+    URB_PARAM (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/NUDAPT44_1km/')
+    FRC_URB2D (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/urbfrac_nlcd2011/')
+    IMPERV (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/nlcd2011_imp_ll_9s/')
+    CANFRA (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/nlcd2011_can_ll_9s/')
+    EROD (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/erod/')
+    CLAYFRAC (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/clayfrac_5m/')
+    SANDFRAC (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/sandfrac_5m/')
+    IRRIGATION (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/irrigation/fao/')
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!  Successful completion of geogrid.        !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+           = 1
+2022-02-05 12:45:28.691 ---   E_SN              = 277
+2022-02-05 12:45:28.691 ---                     = 516
+2022-02-05 12:45:28.691 ---   GEOG_DATA_RES     = 2m
+2022-02-05 12:45:28.691 ---                     = 30s
+2022-02-05 12:45:28.691 ---   DX                = 5000.000000
+2022-02-05 12:45:28.691 ---   DY                = 5000.000000
+2022-02-05 12:45:28.691 ---   MAP_PROJ          = lambert
+2022-02-05 12:45:28.691 ---   POLE_LAT          = 90.000000
+2022-02-05 12:45:28.691 ---   POLE_LON          = 0.000000
+2022-02-05 12:45:28.691 ---   REF_LAT           = -28.921000
+2022-02-05 12:45:28.691 ---   REF_LON           = -53.523998
+2022-02-05 12:45:28.691 ---   REF_X             = 149.000000
+2022-02-05 12:45:28.691 ---   REF_Y             = 138.500000
+2022-02-05 12:45:28.691 ---   TRUELAT1          = -28.921000
+2022-02-05 12:45:28.691 ---   TRUELAT2          = -28.921000
+2022-02-05 12:45:28.691 ---   STAND_LON         = -53.523998
+2022-02-05 12:45:28.691 ---   GEOG_DATA_PATH    = /home/cirrus/bin/WPS_GEOG
+2022-02-05 12:45:28.691 ---   OPT_GEOGRID_TBL_PATH = /home/cirrus/bin/WRF-domains/regiao-sul/
+2022-02-05 12:45:28.691 --- /
+2022-02-05 12:45:28.694 --- Processing domain 1 of 2
+2022-02-05 12:45:28.694 --- INFORM: For HGT_M, couldn't find interpolator sequence for resolution 2m.
+2022-02-05 12:45:28.694 --- INFORM: Using default interpolator sequence for HGT_M.
+2022-02-05 12:45:28.694 --- INFORM: For HGT_M, couldn't find 2m data source.
+2022-02-05 12:45:28.694 --- INFORM: Using default data source for HGT_M.
+2022-02-05 12:45:28.694 --- INFORM: For LANDUSEF, couldn't find interpolator sequence for resolution 2m.
+2022-02-05 12:45:28.694 --- INFORM: Using default interpolator sequence for LANDUSEF.
+2022-02-05 12:45:28.694 --- INFORM: For LANDUSEF, couldn't find 2m data source.
+2022-02-05 12:45:28.694 --- INFORM: Using default data source for LANDUSEF.
+2022-02-05 12:45:28.694 --- INFORM: For SOILTEMP, couldn't find interpolator sequence for resolution 2m.
+2022-02-05 12:45:28.694 --- INFORM: Using default interpolator sequence for SOILTEMP.
+2022-02-05 12:45:28.694 --- INFORM: For SOILTEMP, couldn't find 2m data source.
+2022-02-05 12:45:28.694 --- INFORM: Using default data source for SOILTEMP.
+2022-02-05 12:45:28.694 --- INFORM: Using 2m interpolator sequence for SOILCTOP.
+2022-02-05 12:45:28.694 --- INFORM: Using 2m data source for SOILCTOP.
+2022-02-05 12:45:28.708 --- INFORM: Using 2m interpolator sequence for SOILCBOT.
+2022-02-05 12:45:28.708 --- INFORM: Using 2m data source for SOILCBOT.
+2022-02-05 12:45:28.708 --- INFORM: For ALBEDO12M, couldn't find interpolator sequence for resolution 2m.
+2022-02-05 12:45:28.708 --- INFORM: Using default interpolator sequence for ALBEDO12M.
+2022-02-05 12:45:28.708 --- INFORM: For ALBEDO12M, couldn't find 2m data source.
+2022-02-05 12:45:28.708 --- INFORM: Using default data source for ALBEDO12M.
+2022-02-05 12:45:28.733 --- INFORM: For GREENFRAC, couldn't find interpolator sequence for resolution 2m.
+2022-02-05 12:45:28.733 --- INFORM: Using default interpolator sequence for GREENFRAC.
+2022-02-05 12:45:28.733 --- INFORM: For GREENFRAC, couldn't find 2m data source.
+2022-02-05 12:45:28.733 --- INFORM: Using default data source for GREENFRAC.
+2022-02-05 12:45:28.743 --- INFORM: For LAI12M, couldn't find interpolator sequence for resolution 2m.
+2022-02-05 12:45:28.743 --- INFORM: Using default interpolator sequence for LAI12M.
+2022-02-05 12:45:28.743 --- INFORM: For LAI12M, couldn't find 2m data source.
+2022-02-05 12:45:28.743 --- INFORM: Using default data source for LAI12M.
+2022-02-05 12:45:28.762 --- INFORM: For SNOALB, couldn't find interpolator sequence for resolution 2m.
+2022-02-05 12:45:28.762 --- INFORM: Using default interpolator sequence for SNOALB.
+2022-02-05 12:45:28.762 --- INFORM: For SNOALB, couldn't find 2m data source.
+2022-02-05 12:45:28.762 --- INFORM: Using default data source for SNOALB.
+2022-02-05 12:45:28.837 --- INFORM: For CON, couldn't find interpolator sequence for resolution 2m.
+2022-02-05 12:45:28.837 --- INFORM: Using default interpolator sequence for CON.
+2022-02-05 12:45:28.837 --- INFORM: For CON, couldn't find 2m data source.
+2022-02-05 12:45:28.837 --- INFORM: Using default data source for CON.
+2022-02-05 12:45:28.855 --- INFORM: For VAR, couldn't find interpolator sequence for resolution 2m.
+2022-02-05 12:45:28.855 --- INFORM: Using default interpolator sequence for VAR.
+2022-02-05 12:45:28.855 --- INFORM: For VAR, couldn't find 2m data source.
+2022-02-05 12:45:28.855 --- INFORM: Using default data source for VAR.
+2022-02-05 12:45:28.855 --- INFORM: For OA1, couldn't find interpolator sequence for resolution 2m.
+2022-02-05 12:45:28.855 --- INFORM: Using default interpolator sequence for OA1.
+2022-02-05 12:45:28.855 --- INFORM: For OA1, couldn't find 2m data source.
+2022-02-05 12:45:28.855 --- INFORM: Using default data source for OA1.
+2022-02-05 12:45:28.856 --- INFORM: For OA2, couldn't find interpolator sequence for resolution 2m.
+2022-02-05 12:45:28.856 --- INFORM: Using default interpolator sequence for OA2.
+2022-02-05 12:45:28.856 --- INFORM: For OA2, couldn't find 2m data source.
+2022-02-05 12:45:28.856 --- INFORM: Using default data source for OA2.
+2022-02-05 12:45:28.881 --- INFORM: For OA3, couldn't find interpolator sequence for resolution 2m.
+2022-02-05 12:45:28.881 --- INFORM: Using default interpolator sequence for OA3.
+2022-02-05 12:45:28.881 --- INFORM: For OA3, couldn't find 2m data source.
+2022-02-05 12:45:28.881 --- INFORM: Using default data source for OA3.
+2022-02-05 12:45:28.881 --- INFORM: For OA4, couldn't find interpolator sequence for resolution 2m.
+2022-02-05 12:45:28.881 --- INFORM: Using default interpolator sequence for OA4.
+2022-02-05 12:45:28.881 --- INFORM: For OA4, couldn't find 2m data source.
+2022-02-05 12:45:28.881 --- INFORM: Using default data source for OA4.
+2022-02-05 12:45:28.881 --- INFORM: For OL1, couldn't find interpolator sequence for resolution 2m.
+2022-02-05 12:45:28.881 --- INFORM: Using default interpolator sequence for OL1.
+2022-02-05 12:45:28.881 --- INFORM: For OL1, couldn't find 2m data source.
+2022-02-05 12:45:28.881 --- INFORM: Using default data source for OL1.
+2022-02-05 12:45:28.890 --- INFORM: For OL2, couldn't find interpolator sequence for resolution 2m.
+2022-02-05 12:45:28.890 --- INFORM: Using default interpolator sequence for OL2.
+2022-02-05 12:45:28.890 --- INFORM: For OL2, couldn't find 2m data source.
+2022-02-05 12:45:28.890 --- INFORM: Using default data source for OL2.
+2022-02-05 12:45:28.897 --- INFORM: For OL3, couldn't find interpolator sequence for resolution 2m.
+2022-02-05 12:45:28.897 --- INFORM: Using default interpolator sequence for OL3.
+2022-02-05 12:45:28.897 --- INFORM: For OL3, couldn't find 2m data source.
+2022-02-05 12:45:28.897 --- INFORM: Using default data source for OL3.
+2022-02-05 12:45:28.904 --- INFORM: For OL4, couldn't find interpolator sequence for resolution 2m.
+2022-02-05 12:45:28.904 --- INFORM: Using default interpolator sequence for OL4.
+2022-02-05 12:45:28.904 --- INFORM: For OL4, couldn't find 2m data source.
+2022-02-05 12:45:28.904 --- INFORM: Using default data source for OL4.
+2022-02-05 12:45:28.905 --- INFORM: Using 2m interpolator sequence for VAR_SSO.
+2022-02-05 12:45:28.905 --- INFORM: Using 2m data source for VAR_SSO.
+2022-02-05 12:45:28.912 --- INFORM: For LAKE_DEPTH, couldn't find interpolator sequence for resolution 2m.
+2022-02-05 12:45:28.912 --- INFORM: Using default interpolator sequence for LAKE_DEPTH.
+2022-02-05 12:45:28.912 --- INFORM: For LAKE_DEPTH, couldn't find 2m data source.
+2022-02-05 12:45:28.912 --- INFORM: Using default data source for LAKE_DEPTH.
+2022-02-05 12:45:28.913 --- INFORM: Could not read 'index' file /home/cirrus/bin/WPS_GEOG/lake_depth/index for field LAKE_DEPTH
+2022-02-05 12:45:28.913 --- INFORM: This field is optional and will not be processed.
+2022-02-05 12:45:28.913 --- INFORM: For URB_PARAM, couldn't find interpolator sequence for resolution 2m.
+2022-02-05 12:45:28.913 --- INFORM: Using default interpolator sequence for URB_PARAM.
+2022-02-05 12:45:28.913 --- INFORM: For URB_PARAM, couldn't find 2m data source.
+2022-02-05 12:45:28.913 --- INFORM: Using default data source for URB_PARAM.
+2022-02-05 12:45:28.913 --- INFORM: Could not read 'index' file /home/cirrus/bin/WPS_GEOG/NUDAPT44_1km/index for field URB_PARAM
+2022-02-05 12:45:28.913 --- INFORM: This field is optional and will not be processed.
+2022-02-05 12:45:28.913 --- INFORM: For FRC_URB2D, couldn't find interpolator sequence for resolution 2m.
+2022-02-05 12:45:28.913 --- INFORM: Using default interpolator sequence for FRC_URB2D.
+2022-02-05 12:45:28.914 --- INFORM: For FRC_URB2D, couldn't find 2m data source.
+2022-02-05 12:45:28.914 --- INFORM: Using default data source for FRC_URB2D.
+2022-02-05 12:45:28.914 --- INFORM: Could not read 'index' file /home/cirrus/bin/WPS_GEOG/urbfrac_nlcd2011/index for field FRC_URB2D
+2022-02-05 12:45:28.914 --- INFORM: This field is optional and will not be processed.
+2022-02-05 12:45:28.914 --- INFORM: For IMPERV, couldn't find interpolator sequence for resolution 2m.
+2022-02-05 12:45:28.914 --- INFORM: Using default interpolator sequence for IMPERV.
+2022-02-05 12:45:28.914 --- INFORM: For IMPERV, couldn't find 2m data source.
+2022-02-05 12:45:28.914 --- INFORM: Using default data source for IMPERV.
+2022-02-05 12:45:28.914 --- INFORM: Could not read 'index' file /home/cirrus/bin/WPS_GEOG/nlcd2011_imp_ll_9s/index for field IMPERV
+2022-02-05 12:45:28.914 --- INFORM: This field is optional and will not be processed.
+2022-02-05 12:45:28.914 --- INFORM: For CANFRA, couldn't find interpolator sequence for resolution 2m.
+2022-02-05 12:45:28.914 --- INFORM: Using default interpolator sequence for CANFRA.
+2022-02-05 12:45:28.914 --- INFORM: For CANFRA, couldn't find 2m data source.
+2022-02-05 12:45:28.914 --- INFORM: Using default data source for CANFRA.
+2022-02-05 12:45:28.915 --- INFORM: Could not read 'index' file /home/cirrus/bin/WPS_GEOG/nlcd2011_can_ll_9s/index for field CANFRA
+2022-02-05 12:45:28.915 --- INFORM: This field is optional and will not be processed.
+2022-02-05 12:45:28.915 --- INFORM: For EROD, couldn't find interpolator sequence for resolution 2m.
+2022-02-05 12:45:28.915 --- INFORM: Using default interpolator sequence for EROD.
+2022-02-05 12:45:28.915 --- INFORM: For EROD, couldn't find 2m data source.
+2022-02-05 12:45:28.915 --- INFORM: Using default data source for EROD.
+2022-02-05 12:45:28.915 --- INFORM: Could not read 'index' file /home/cirrus/bin/WPS_GEOG/erod/index for field EROD
+2022-02-05 12:45:28.915 --- INFORM: This field is optional and will not be processed.
+2022-02-05 12:45:28.915 --- INFORM: For CLAYFRAC, couldn't find interpolator sequence for resolution 2m.
+2022-02-05 12:45:28.915 --- INFORM: Using default interpolator sequence for CLAYFRAC.
+2022-02-05 12:45:28.915 --- INFORM: For CLAYFRAC, couldn't find 2m data source.
+2022-02-05 12:45:28.915 --- INFORM: Using default data source for CLAYFRAC.
+2022-02-05 12:45:28.915 --- INFORM: Could not read 'index' file /home/cirrus/bin/WPS_GEOG/clayfrac_5m/index for field CLAYFRAC
+2022-02-05 12:45:28.915 --- INFORM: This field is optional and will not be processed.
+2022-02-05 12:45:28.915 --- INFORM: For SANDFRAC, couldn't find interpolator sequence for resolution 2m.
+2022-02-05 12:45:28.915 --- INFORM: Using default interpolator sequence for SANDFRAC.
+2022-02-05 12:45:28.915 --- INFORM: For SANDFRAC, couldn't find 2m data source.
+2022-02-05 12:45:28.916 --- INFORM: Using default data source for SANDFRAC.
+2022-02-05 12:45:28.916 --- INFORM: Could not read 'index' file /home/cirrus/bin/WPS_GEOG/sandfrac_5m/index for field SANDFRAC
+2022-02-05 12:45:28.916 --- INFORM: This field is optional and will not be processed.
+2022-02-05 12:45:28.916 --- INFORM: For IRRIGATION, couldn't find interpolator sequence for resolution 2m.
+2022-02-05 12:45:28.916 --- INFORM: Using default interpolator sequence for IRRIGATION.
+2022-02-05 12:45:28.916 --- INFORM: For IRRIGATION, couldn't find 2m data source.
+2022-02-05 12:45:28.916 --- INFORM: Using default data source for IRRIGATION.
+2022-02-05 12:45:28.916 --- INFORM: Could not read 'index' file /home/cirrus/bin/WPS_GEOG/irrigation/fao/index for field IRRIGATION
+2022-02-05 12:45:28.916 --- INFORM: This field is optional and will not be processed.
+2022-02-05 12:45:29.246 --- Processing field 1 of 23 (LANDUSEF)
+2022-02-05 12:45:30.528 --- Processing field 2 of 23 (LU_INDEX)
+2022-02-05 12:45:30.541 --- Processing field 3 of 23 (HGT_M)
+2022-02-05 12:45:31.910 --- Processing field 4 of 23 (SOILTEMP)
+2022-02-05 12:45:31.961 --- Processing field 5 of 23 (SOILCTOP)
+2022-02-05 12:45:32.649 --- Processing field 6 of 23 (SCT_DOM)
+2022-02-05 12:45:32.657 --- Processing field 7 of 23 (SOILCBOT)
+2022-02-05 12:45:32.900 --- Processing field 8 of 23 (SCB_DOM)
+2022-02-05 12:45:32.907 --- Processing field 9 of 23 (ALBEDO12M)
+2022-02-05 12:45:34.845 --- Processing field 10 of 23 (GREENFRAC)
+2022-02-05 12:45:38.073 --- Processing field 11 of 23 (LAI12M)
+2022-02-05 12:45:38.254 --- Processing field 12 of 23 (SNOALB)
+2022-02-05 12:45:38.532 --- Processing field 13 of 23 (CON)
+2022-02-05 12:45:38.669 --- Processing field 14 of 23 (VAR)
+2022-02-05 12:45:38.802 --- Processing field 15 of 23 (OA1)
+2022-02-05 12:45:38.907 --- Processing field 16 of 23 (OA2)
+2022-02-05 12:45:39.080 --- Processing field 17 of 23 (OA3)
+2022-02-05 12:45:39.213 --- Processing field 18 of 23 (OA4)
+2022-02-05 12:45:39.398 --- Processing field 19 of 23 (OL1)
+2022-02-05 12:45:39.527 --- Processing field 20 of 23 (OL2)
+2022-02-05 12:45:39.656 --- Processing field 21 of 23 (OL3)
+2022-02-05 12:45:39.790 --- Processing field 22 of 23 (OL4)
+2022-02-05 12:45:39.868 --- Processing field 23 of 23 (VAR_SSO)
+2022-02-05 12:45:39.987 --- Optional fields not processed by geogrid:
+2022-02-05 12:45:39.987 ---     LAKE_DEPTH (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/lake_depth/')
+2022-02-05 12:45:39.987 ---     URB_PARAM (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/NUDAPT44_1km/')
+2022-02-05 12:45:39.987 ---     FRC_URB2D (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/urbfrac_nlcd2011/')
+2022-02-05 12:45:39.987 ---     IMPERV (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/nlcd2011_imp_ll_9s/')
+2022-02-05 12:45:39.987 ---     CANFRA (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/nlcd2011_can_ll_9s/')
+2022-02-05 12:45:39.987 ---     EROD (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/erod/')
+2022-02-05 12:45:39.987 ---     CLAYFRAC (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/clayfrac_5m/')
+2022-02-05 12:45:39.987 ---     SANDFRAC (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/sandfrac_5m/')
+2022-02-05 12:45:39.987 ---     IRRIGATION (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/irrigation/fao/')
+2022-02-05 12:45:39.987 --- Processing domain 2 of 2
+2022-02-05 12:45:39.987 --- INFORM: For HGT_M, couldn't find interpolator sequence for resolution 30s.
+2022-02-05 12:45:39.987 --- INFORM: Using default interpolator sequence for HGT_M.
+2022-02-05 12:45:39.987 --- INFORM: For HGT_M, couldn't find 30s data source.
+2022-02-05 12:45:39.987 --- INFORM: Using default data source for HGT_M.
+2022-02-05 12:45:39.988 --- INFORM: For LANDUSEF, couldn't find interpolator sequence for resolution 30s.
+2022-02-05 12:45:39.988 --- INFORM: Using default interpolator sequence for LANDUSEF.
+2022-02-05 12:45:39.988 --- INFORM: For LANDUSEF, couldn't find 30s data source.
+2022-02-05 12:45:39.988 --- INFORM: Using default data source for LANDUSEF.
+2022-02-05 12:45:39.988 --- INFORM: For SOILTEMP, couldn't find interpolator sequence for resolution 30s.
+2022-02-05 12:45:39.988 --- INFORM: Using default interpolator sequence for SOILTEMP.
+2022-02-05 12:45:39.988 --- INFORM: For SOILTEMP, couldn't find 30s data source.
+2022-02-05 12:45:39.988 --- INFORM: Using default data source for SOILTEMP.
+2022-02-05 12:45:39.988 --- INFORM: Using 30s interpolator sequence for SOILCTOP.
+2022-02-05 12:45:39.988 --- INFORM: Using 30s data source for SOILCTOP.
+2022-02-05 12:45:39.995 --- INFORM: Using 30s interpolator sequence for SOILCBOT.
+2022-02-05 12:45:39.995 --- INFORM: Using 30s data source for SOILCBOT.
+2022-02-05 12:45:40.007 --- INFORM: For ALBEDO12M, couldn't find interpolator sequence for resolution 30s.
+2022-02-05 12:45:40.007 --- INFORM: Using default interpolator sequence for ALBEDO12M.
+2022-02-05 12:45:40.007 --- INFORM: For ALBEDO12M, couldn't find 30s data source.
+2022-02-05 12:45:40.007 --- INFORM: Using default data source for ALBEDO12M.
+2022-02-05 12:45:40.007 --- INFORM: For GREENFRAC, couldn't find interpolator sequence for resolution 30s.
+2022-02-05 12:45:40.007 --- INFORM: Using default interpolator sequence for GREENFRAC.
+2022-02-05 12:45:40.007 --- INFORM: For GREENFRAC, couldn't find 30s data source.
+2022-02-05 12:45:40.007 --- INFORM: Using default data source for GREENFRAC.
+2022-02-05 12:45:40.007 --- INFORM: For LAI12M, couldn't find interpolator sequence for resolution 30s.
+2022-02-05 12:45:40.007 --- INFORM: Using default interpolator sequence for LAI12M.
+2022-02-05 12:45:40.007 --- INFORM: For LAI12M, couldn't find 30s data source.
+2022-02-05 12:45:40.007 --- INFORM: Using default data source for LAI12M.
+2022-02-05 12:45:40.007 --- INFORM: For SNOALB, couldn't find interpolator sequence for resolution 30s.
+2022-02-05 12:45:40.007 --- INFORM: Using default interpolator sequence for SNOALB.
+2022-02-05 12:45:40.007 --- INFORM: For SNOALB, couldn't find 30s data source.
+2022-02-05 12:45:40.007 --- INFORM: Using default data source for SNOALB.
+2022-02-05 12:45:40.007 --- INFORM: For CON, couldn't find interpolator sequence for resolution 30s.
+2022-02-05 12:45:40.007 --- INFORM: Using default interpolator sequence for CON.
+2022-02-05 12:45:40.007 --- INFORM: For CON, couldn't find 30s data source.
+2022-02-05 12:45:40.007 --- INFORM: Using default data source for CON.
+2022-02-05 12:45:40.007 --- INFORM: For VAR, couldn't find interpolator sequence for resolution 30s.
+2022-02-05 12:45:40.008 --- INFORM: Using default interpolator sequence for VAR.
+2022-02-05 12:45:40.008 --- INFORM: For VAR, couldn't find 30s data source.
+2022-02-05 12:45:40.008 --- INFORM: Using default data source for VAR.
+2022-02-05 12:45:40.008 --- INFORM: For OA1, couldn't find interpolator sequence for resolution 30s.
+2022-02-05 12:45:40.008 --- INFORM: Using default interpolator sequence for OA1.
+2022-02-05 12:45:40.008 --- INFORM: For OA1, couldn't find 30s data source.
+2022-02-05 12:45:40.008 --- INFORM: Using default data source for OA1.
+2022-02-05 12:45:40.008 --- INFORM: For OA2, couldn't find interpolator sequence for resolution 30s.
+2022-02-05 12:45:40.008 --- INFORM: Using default interpolator sequence for OA2.
+2022-02-05 12:45:40.008 --- INFORM: For OA2, couldn't find 30s data source.
+2022-02-05 12:45:40.008 --- INFORM: Using default data source for OA2.
+2022-02-05 12:45:40.008 --- INFORM: For OA3, couldn't find interpolator sequence for resolution 30s.
+2022-02-05 12:45:40.008 --- INFORM: Using default interpolator sequence for OA3.
+2022-02-05 12:45:40.008 --- INFORM: For OA3, couldn't find 30s data source.
+2022-02-05 12:45:40.008 --- INFORM: Using default data source for OA3.
+2022-02-05 12:45:40.008 --- INFORM: For OA4, couldn't find interpolator sequence for resolution 30s.
+2022-02-05 12:45:40.008 --- INFORM: Using default interpolator sequence for OA4.
+2022-02-05 12:45:40.008 --- INFORM: For OA4, couldn't find 30s data source.
+2022-02-05 12:45:40.008 --- INFORM: Using default data source for OA4.
+2022-02-05 12:45:40.008 --- INFORM: For OL1, couldn't find interpolator sequence for resolution 30s.
+2022-02-05 12:45:40.008 --- INFORM: Using default interpolator sequence for OL1.
+2022-02-05 12:45:40.008 --- INFORM: For OL1, couldn't find 30s data source.
+2022-02-05 12:45:40.008 --- INFORM: Using default data source for OL1.
+2022-02-05 12:45:40.008 --- INFORM: For OL2, couldn't find interpolator sequence for resolution 30s.
+2022-02-05 12:45:40.008 --- INFORM: Using default interpolator sequence for OL2.
+2022-02-05 12:45:40.008 --- INFORM: For OL2, couldn't find 30s data source.
+2022-02-05 12:45:40.008 --- INFORM: Using default data source for OL2.
+2022-02-05 12:45:40.008 --- INFORM: For OL3, couldn't find interpolator sequence for resolution 30s.
+2022-02-05 12:45:40.008 --- INFORM: Using default interpolator sequence for OL3.
+2022-02-05 12:45:40.008 --- INFORM: For OL3, couldn't find 30s data source.
+2022-02-05 12:45:40.008 --- INFORM: Using default data source for OL3.
+2022-02-05 12:45:40.008 --- INFORM: For OL4, couldn't find interpolator sequence for resolution 30s.
+2022-02-05 12:45:40.008 --- INFORM: Using default interpolator sequence for OL4.
+2022-02-05 12:45:40.008 --- INFORM: For OL4, couldn't find 30s data source.
+2022-02-05 12:45:40.008 --- INFORM: Using default data source for OL4.
+2022-02-05 12:45:40.009 --- INFORM: Using 30s interpolator sequence for VAR_SSO.
+2022-02-05 12:45:40.009 --- INFORM: Using 30s data source for VAR_SSO.
+2022-02-05 12:45:40.023 --- INFORM: For LAKE_DEPTH, couldn't find interpolator sequence for resolution 30s.
+2022-02-05 12:45:40.024 --- INFORM: Using default interpolator sequence for LAKE_DEPTH.
+2022-02-05 12:45:40.024 --- INFORM: For LAKE_DEPTH, couldn't find 30s data source.
+2022-02-05 12:45:40.024 --- INFORM: Using default data source for LAKE_DEPTH.
+2022-02-05 12:45:40.024 --- INFORM: Could not read 'index' file /home/cirrus/bin/WPS_GEOG/lake_depth/index for field LAKE_DEPTH
+2022-02-05 12:45:40.024 --- INFORM: This field is optional and will not be processed.
+2022-02-05 12:45:40.024 --- INFORM: For URB_PARAM, couldn't find interpolator sequence for resolution 30s.
+2022-02-05 12:45:40.024 --- INFORM: Using default interpolator sequence for URB_PARAM.
+2022-02-05 12:45:40.024 --- INFORM: For URB_PARAM, couldn't find 30s data source.
+2022-02-05 12:45:40.024 --- INFORM: Using default data source for URB_PARAM.
+2022-02-05 12:45:40.024 --- INFORM: Could not read 'index' file /home/cirrus/bin/WPS_GEOG/NUDAPT44_1km/index for field URB_PARAM
+2022-02-05 12:45:40.024 --- INFORM: This field is optional and will not be processed.
+2022-02-05 12:45:40.024 --- INFORM: For FRC_URB2D, couldn't find interpolator sequence for resolution 30s.
+2022-02-05 12:45:40.024 --- INFORM: Using default interpolator sequence for FRC_URB2D.
+2022-02-05 12:45:40.024 --- INFORM: For FRC_URB2D, couldn't find 30s data source.
+2022-02-05 12:45:40.024 --- INFORM: Using default data source for FRC_URB2D.
+2022-02-05 12:45:40.024 --- INFORM: Could not read 'index' file /home/cirrus/bin/WPS_GEOG/urbfrac_nlcd2011/index for field FRC_URB2D
+2022-02-05 12:45:40.024 --- INFORM: This field is optional and will not be processed.
+2022-02-05 12:45:40.024 --- INFORM: For IMPERV, couldn't find interpolator sequence for resolution 30s.
+2022-02-05 12:45:40.024 --- INFORM: Using default interpolator sequence for IMPERV.
+2022-02-05 12:45:40.024 --- INFORM: For IMPERV, couldn't find 30s data source.
+2022-02-05 12:45:40.024 --- INFORM: Using default data source for IMPERV.
+2022-02-05 12:45:40.024 --- INFORM: Could not read 'index' file /home/cirrus/bin/WPS_GEOG/nlcd2011_imp_ll_9s/index for field IMPERV
+2022-02-05 12:45:40.024 --- INFORM: This field is optional and will not be processed.
+2022-02-05 12:45:40.024 --- INFORM: For CANFRA, couldn't find interpolator sequence for resolution 30s.
+2022-02-05 12:45:40.024 --- INFORM: Using default interpolator sequence for CANFRA.
+2022-02-05 12:45:40.024 --- INFORM: For CANFRA, couldn't find 30s data source.
+2022-02-05 12:45:40.024 --- INFORM: Using default data source for CANFRA.
+2022-02-05 12:45:40.024 --- INFORM: Could not read 'index' file /home/cirrus/bin/WPS_GEOG/nlcd2011_can_ll_9s/index for field CANFRA
+2022-02-05 12:45:40.024 --- INFORM: This field is optional and will not be processed.
+2022-02-05 12:45:40.024 --- INFORM: For EROD, couldn't find interpolator sequence for resolution 30s.
+2022-02-05 12:45:40.024 --- INFORM: Using default interpolator sequence for EROD.
+2022-02-05 12:45:40.024 --- INFORM: For EROD, couldn't find 30s data source.
+2022-02-05 12:45:40.024 --- INFORM: Using default data source for EROD.
+2022-02-05 12:45:40.024 --- INFORM: Could not read 'index' file /home/cirrus/bin/WPS_GEOG/erod/index for field EROD
+2022-02-05 12:45:40.024 --- INFORM: This field is optional and will not be processed.
+2022-02-05 12:45:40.024 --- INFORM: For CLAYFRAC, couldn't find interpolator sequence for resolution 30s.
+2022-02-05 12:45:40.024 --- INFORM: Using default interpolator sequence for CLAYFRAC.
+2022-02-05 12:45:40.024 --- INFORM: For CLAYFRAC, couldn't find 30s data source.
+2022-02-05 12:45:40.024 --- INFORM: Using default data source for CLAYFRAC.
+2022-02-05 12:45:40.024 --- INFORM: Could not read 'index' file /home/cirrus/bin/WPS_GEOG/clayfrac_5m/index for field CLAYFRAC
+2022-02-05 12:45:40.024 --- INFORM: This field is optional and will not be processed.
+2022-02-05 12:45:40.024 --- INFORM: For SANDFRAC, couldn't find interpolator sequence for resolution 30s.
+2022-02-05 12:45:40.024 --- INFORM: Using default interpolator sequence for SANDFRAC.
+2022-02-05 12:45:40.024 --- INFORM: For SANDFRAC, couldn't find 30s data source.
+2022-02-05 12:45:40.024 --- INFORM: Using default data source for SANDFRAC.
+2022-02-05 12:45:40.024 --- INFORM: Could not read 'index' file /home/cirrus/bin/WPS_GEOG/sandfrac_5m/index for field SANDFRAC
+2022-02-05 12:45:40.024 --- INFORM: This field is optional and will not be processed.
+2022-02-05 12:45:40.024 --- INFORM: For IRRIGATION, couldn't find interpolator sequence for resolution 30s.
+2022-02-05 12:45:40.024 --- INFORM: Using default interpolator sequence for IRRIGATION.
+2022-02-05 12:45:40.024 --- INFORM: For IRRIGATION, couldn't find 30s data source.
+2022-02-05 12:45:40.024 --- INFORM: Using default data source for IRRIGATION.
+2022-02-05 12:45:40.024 --- INFORM: Could not read 'index' file /home/cirrus/bin/WPS_GEOG/irrigation/fao/index for field IRRIGATION
+2022-02-05 12:45:40.024 --- INFORM: This field is optional and will not be processed.
+2022-02-05 12:45:40.644 --- Processing field 1 of 23 (LANDUSEF)
+2022-02-05 12:45:41.217 --- Processing field 2 of 23 (LU_INDEX)
+2022-02-05 12:45:41.290 --- Processing field 3 of 23 (HGT_M)
+2022-02-05 12:45:41.418 --- Processing field 4 of 23 (SOILTEMP)
+2022-02-05 12:45:41.566 --- Processing field 5 of 23 (SOILCTOP)
+2022-02-05 12:45:42.156 --- Processing field 6 of 23 (SCT_DOM)
+2022-02-05 12:45:42.194 --- Processing field 7 of 23 (SOILCBOT)
+2022-02-05 12:45:42.786 --- Processing field 8 of 23 (SCB_DOM)
+2022-02-05 12:45:42.828 --- Processing field 9 of 23 (ALBEDO12M)
+2022-02-05 12:45:43.531 --- Processing field 10 of 23 (GREENFRAC)
+2022-02-05 12:45:44.552 --- Processing field 11 of 23 (LAI12M)
+2022-02-05 12:45:45.149 --- Processing field 12 of 23 (SNOALB)
+2022-02-05 12:45:45.269 --- Processing field 13 of 23 (CON)
+2022-02-05 12:45:45.389 --- Processing field 14 of 23 (VAR)
+2022-02-05 12:45:45.513 --- Processing field 15 of 23 (OA1)
+2022-02-05 12:45:45.636 --- Processing field 16 of 23 (OA2)
+2022-02-05 12:45:45.769 --- Processing field 17 of 23 (OA3)
+2022-02-05 12:45:45.890 --- Processing field 18 of 23 (OA4)
+2022-02-05 12:45:46.014 --- Processing field 19 of 23 (OL1)
+2022-02-05 12:45:46.133 --- Processing field 20 of 23 (OL2)
+2022-02-05 12:45:46.253 --- Processing field 21 of 23 (OL3)
+2022-02-05 12:45:46.371 --- Processing field 22 of 23 (OL4)
+2022-02-05 12:45:46.488 --- Processing field 23 of 23 (VAR_SSO)
+2022-02-05 12:45:46.734 --- Optional fields not processed by geogrid:
+2022-02-05 12:45:46.734 ---     LAKE_DEPTH (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/lake_depth/')
+2022-02-05 12:45:46.734 ---     URB_PARAM (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/NUDAPT44_1km/')
+2022-02-05 12:45:46.734 ---     FRC_URB2D (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/urbfrac_nlcd2011/')
+2022-02-05 12:45:46.734 ---     IMPERV (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/nlcd2011_imp_ll_9s/')
+2022-02-05 12:45:46.734 ---     CANFRA (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/nlcd2011_can_ll_9s/')
+2022-02-05 12:45:46.734 ---     EROD (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/erod/')
+2022-02-05 12:45:46.734 ---     CLAYFRAC (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/clayfrac_5m/')
+2022-02-05 12:45:46.734 ---     SANDFRAC (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/sandfrac_5m/')
+2022-02-05 12:45:46.734 ---     IRRIGATION (priority=1, resolution='default', path='/home/cirrus/bin/WPS_GEOG/irrigation/fao/')
+2022-02-05 12:45:46.734 ---  *** Successful completion of program geogrid.exe ***

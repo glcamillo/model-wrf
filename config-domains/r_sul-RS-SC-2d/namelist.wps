@@ -1,0 +1,81 @@
+&share
+ wrf_core = 'ARW',
+ max_dom = 2,
+ start_date = '2022-02-08_00:00:00', '2022-02-08_00:00:00', 
+ end_date   = '2022-02-08_12:00:00', '2022-02-08_12:00:00', 
+ interval_seconds = 21600,
+ io_form_geogrid = 2,
+ opt_output_from_geogrid_path = '/home/cirrus/bin/WRF-domains/r_sul-RS-SC-2d/',
+ debug_level = 0,
+/
+
+&geogrid
+ parent_id         = 1,1,
+ parent_grid_ratio = 1,5,
+ i_parent_start    = 1,51,
+ j_parent_start    = 1,71,
+ e_we          = 150,391,
+ e_sn          = 160,371,
+ geog_data_res = '2m','30s',
+ dx = 10000,
+ dy = 10000,
+ map_proj =  'lambert',
+ ref_lat   = -30.477,
+ ref_lon   = -53.302,
+ truelat1  = -30.477,
+ truelat2  = -30.477,
+ stand_lon = -53.302,
+ geog_data_path = '/home/cirrus/bin/WPS_GEOG',
+ opt_geogrid_tbl_path = '/home/cirrus/bin/WRF-domains/r_sul-RS-SC-2d/',
+ ref_x = 75.0,
+ ref_y = 80.0,
+/
+
+&ungrib
+ out_format = 'WPS',
+ prefix = 'FILE',
+/
+
+&metgrid
+ fg_name = 'FILE',
+ io_form_metgrid = 2,
+ opt_output_from_metgrid_path = '/home/cirrus/bin/WRF-domains/r_sul-RS-SC-2d/',
+ opt_metgrid_tbl_path = '/home/cirrus/bin/WRF-domains/r_sul-RS-SC-2d/',
+/
+
+&mod_levs
+ press_pa = 201300 , 200100 , 100000 ,
+             95000 ,  90000 ,
+             85000 ,  80000 ,
+             75000 ,  70000 ,
+             65000 ,  60000 ,
+             55000 ,  50000 ,
+             45000 ,  40000 ,
+             35000 ,  30000 ,
+             25000 ,  20000 ,
+             15000 ,  10000 ,
+              5000 ,   1000
+ /
+
+
+&domain_wizard
+ grib_data_path = '/home/cirrus/bin/data',
+ grib_vtable = 'Vtable.GFS',
+ dwiz_name    =r_sul-RS-SC-2d
+ dwiz_desc    =
+ dwiz_user_rect_x1 =2625
+ dwiz_user_rect_y1 =2476
+ dwiz_user_rect_x2 =3078
+ dwiz_user_rect_y2 =2947
+ dwiz_show_political =true
+ dwiz_center_over_gmt =true
+ dwiz_latlon_space_in_deg =10
+ dwiz_latlon_linecolor =-8355712
+ dwiz_map_scale_pct =50.0
+ dwiz_map_vert_scrollbar_pos =2438
+ dwiz_map_horiz_scrollbar_pos =2450
+ dwiz_gridpt_dist_km =10.0
+ dwiz_mpi_command =null
+ dwiz_tcvitals =null
+ dwiz_bigmap =Y
+/

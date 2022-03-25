@@ -1,186 +1,1213 @@
-#!/bin/bash -x
+#!/bin/bash
 #
-#  Codificação: UTF-8
+#  Encoding UTF-8
+#  Last revision: 2022-03-16
+#  Obs.: these scripts uses features from Bash that are not found in other versions of sh.
 
-# Script para execução do modelo numerico de tempo WRF (open source de dominio publico)
-#  Skamarock, W. C., J. B. Klemp, J. Dudhia, D. O. Gill, Z. Liu, J. Berner, W. Wang, J. G. Powers, M. G. Duda, D. M. Barker, and X.-Y. Huang, 2019: A Description of the Advanced Research WRF Version 4. NCAR Tech. Note NCAR/TN-556+STR, 145 pp. doi:10.5065/1dfh-6p97
-#  Disponivel em: https://www2.mmm.ucar.edu/wrf/users/
+
+# runwrf.sh: this is the main script that executes the routines for the WRF model.
 #
-# Versão: 0.1 (2009): foram feitas algumas tentativas para criar este script - sem sucesso.
-#         1.0 (Junho/Julho2010): aproveitou-se a maior parte do run do MM5 e foi desenvolvido
-#                          especificamente para proporcionar rodadas do WRF. Surgiu da necessidade
-#                          do trabalho de pesquisa da EAO (CAP 2/2010). O trabalho consistirá em
-#                          comparações de ventos em níveis baixos entre o MM5 e o WRF.
-#         2.0 (abril/maio2011): modificacoes para tornar o codigo mais limpo e com algumas melhorias.
-#                          Inclusao do sistema de multiplas configuracoes.
-#         3.0 (maio2021): 
-#             a) inclusao da escolha da resolucao dos dados globais: 1p00, 0p50, 0p25
-#             b) inicio da inclusao de opcoes via parametro linha comando (emprestado do run.sh - RegCM)
-#         4.0 (out2021): 
-#             a) modificacao do script para seguir o estilo do script do RegCM (mais recente)
-#             b) inclusao de novos dominios (incluindo o que sera usado para o projeto mestrado IFSC
-#             c) adaptacao para a mais recente versao do WRF 4.3 de 10/5/21 (https://github.com/wrf-model/WRF/releases)
+# Use
+
+
+#
+#  Versions and changelogs (more detailed in the Readme.md):
+#    0.1 (2009): this script was aimed to automatize the WRF model routines; this
+#                was based on the script that executed the MM5 model.
+#    This script and the others went through several revisions/versions 
+#    4.0 (2021-10-12): this script enters in revision.
+#    4.1 (2022-02-10): the model is running now, but there is still more
+#                      development and testing to go
 # ----------------------------------------
-# Modificações por Cap Gerson (G&M@Jesus):
-# JunJul10: criação deste script. Por enquanto, somente com a configuração 0.
-# 21jul10: modificação do script namelist.ARWpost.sh para que aceite como parâmetro
-#          o tipo de nível de saída (sigma, pressão, altura).
-# 27jul10: a variável DIR_CORRENTE, nas rodadas com crontab, não deve ser especificada com `pwd`,
-#          mas sim ajustá-la com o diretório /home/user/mm5.
-# 28mar13: inserido um automatismo para modificacao da variável DIR_CORRENTE.
-#  3out21: alteracao nomes variaveis: status_rodada_corrente  -> status-current-configuration.log
-#                                     status-rodada.log -> status-components-out-execution.log
-
-## TODO
-#  Revisar o WPS (namelist.wps) cfe as novas versões WRF
 
 
-# DADOS GLOBAIS NCEP: mudanças no acesso e em outros parametros (22 mar 2021)
-# https://www.nco.ncep.noaa.gov/pmb/products/gfs/
-# Tres resolucoes do modelo global GFS:  
-#    0.25 degree resolution 	gfs.tCCz.pgrb2.0p25.fFFF 	ANL FH000 FH001-384
-#    0.5 degree resolution 	gfs.tCCz.pgrb2.0p50.fFFF 	ANL FH000 FH003-384
-#    1.0 degree resolution      gfs.tCCz.pgrb2.1p00.fFFF 	ANL FH000 FH003-384
-# https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.t"$HORA_INICIAL"z.pgrb2.1p00.f$HORA_PREVISAO
+#  Command line parameters for script execution (basic info; more in Readme.md)
+#  ./runwrf.sh -conf A -ts 2022-01-01-12 -ti 24 -gtr 3 -np 4 -gd gfs0p50
+#     -conf A : domain configuration A
+#     -ts 2022-01-01-12 : date-time of start of simulation
+#     -ti 24 : integration time in hours (24 hours)
+#  OPTIONAL
+# 
+#
+# Or call for help: ./runwrf.sh --help
+#    -tiout 3 | 6 :(H) time interval of output (default:3h) (OPTIONAL)"
+#    -gd gfs1p00 | gfs0p50 | gfs0p25 | cptec_wrf_5km :global data NCEP-GFS (1|0,5|0,25 degree - default:gfs1p00) OR WRF from CPTEC (5km)"
+#    -gti 1 | 3 | 6 :(H) time interval (hours) of global input data (time resolution): 1 for cptec_wrf_5km and 3/6 for gfs (defaults are: 1h for cptec_wrf_5km and 3h for gfs)"
+#    -np 1 :number of processes to be use: (default=1)"
+#    --wrf-time-step 20 :value (in s) of WRF time step (default:each configuration has been defined with s
+
+# ----------------------------------------
 
 
 
-if [ 1 ]; then
-      echo ; uname -r
-fi
+# Set debugging messages (variable tracking)
+DEBUG=1 # debug ON
+#DEBUG=0 # debug OFF
 
+
+## TODO TODO TODO permanente
+#  More in README.md
 
 ################################################################################
-#                  Definições PADRÕES
+################################################################################
+#
+#                   Basic and Global DEFINITIONS
+#
+################################################################################
 ################################################################################
 
-# Variavel que vai controlar se todos os parametros (primordiais) foram passados via linha de comando.
-NUM_PARAM=0
 
-# Numero de nucleos de processamento.
-NUM_PROC=1
+# Em 28mar13: ajuste da variável CURRENT_DIR. Se a inicializacao for manual ou
+#             interativa, a variável será ajustada pelo `pwd` durante o processamento.
+CURRENT_DIR=/home/$(id -un)/model-wrf
 
-# Opção padrão para o mpirun
-OPCAO_1=""   # Opção que o mpirun aceita: --use-hwthread-cpus
+# 20220307: string that contains the letters of all domains configured
+CONFIG_VALUES="ABCDEFGHIJK"
+declare -u CONFIG="A"  # receives only uppercase letters
+# What depends on this:
+#   model-wrf/post_processing/process_ARWpost.sh
+#   model-wrf/post_processing/generate_output_graphics.sh
 
-# Resolucao dos dados globais NCEP: padrão 1 grau
-RES_G_NCEP="1p00"
 
-# Tempo de integração em horas
-TEMPO_INTEGRACAO=24; export _TIMAX=1440
-
-# Em 03jun2021: ajustada aqui e na função opcoes_rodada,
-#      logo, não será mais aberta opção para escolha
 COMPILADOR=GFORTRAN
 
+# Variavel que vai controlar se todos os parametros (primordiais) foram passados via linha de comando.
+NUM_PARAM=0      # This variable will track the parameters supplied by user
 
+NUM_ARGUMENTOS=3 # MANDATORY parameters: conf ts ti
+# ./runwrf.sh -conf A -ts 2021-06-10-00 -ti 24 -gd gfs0p25 -gtr 6
+# Optional parameters
+# gd: gfs1p00 | gfs0p50 | gfs0p25 | cptec_wrf_5km
+# gtr: 3 or 6 hours
+
+# Some default arguments/parameters
+NUM_PROC=1  # number of process
+WRF_PARAM_FOR_MPI_1=""   # option to mpirun: --use-hwthread-cpus
+RES_G_NCEP="1p00" # global data: resolution
+RUN_TIME_HOURS=24 # integration time
+
+# Em 02jan22: variable to define where the global met data come from
+#        GFS, CPTEC (from WRF model), etc
+# ATTENTION: this choice is determined by the domain configuration (for best config and results)
+GLOBAL_DATA_SOURCE=gfs
+# GLOBAL_DATA="gfs1p00" This var contain the resolution of input data for the GLOBAL_DATA_SOURCE
+
+# Setting as a global variables
+DIR_WRF_OUTPUT=""
+DIR_WPS_INPUT=""
+
+
+
+
+# -------- Settings that modify the path of execution
+
+# 20220210: to use or not the geogrid file provided by this scripts
+#           Default=no -> geo_em.d0? will be generated by program geogrid.exe
+USE_GENERATED_GEOGRID="no"
+
+# 20220309: how will the previous execution be handled?
+# Two type of configurations: 
+#  - Domain and date-hour and length of simulation
+#  - Physics, dynamics, and other relative to wrf execution
+
+
+# a) Discard the state of previous execution and starts a new (can use the same configuration
+#    or a manual editing of the namelist files (WPS,WRF): bin/WPS/namelist.wps and bin/WRF/namelist.input
+# USE_STATIC_NAMELIST_FILES="yes"
+# b) Or, the normal execution with parameters defined in command line and in the config files.
+USE_STATIC_NAMELIST_FILES="no"   # Default
+
+#  ------- Setting to enable manual or automatic (via cron) execution
+
+# Para rodar via cron ajustar manualmente o diretório CURRENT_DIR no início do
+#       processamento do modelo.
 # Em 08nov06: variavel para indicar que se quer ou 
 #             nao inicilizar interativamente o grupo data-hora.
 # Em 15ago10: tipos de inicializações do grupo data-hora
-# AUTOMATICO=data do dia de hoje; hora=12
-# MANUAL=mudança dos valores de data-hora dentro do script.
-# INTERATIVA=o script solicita os valores via questionamentos.
-#DH_INICIALIZACAO=AUTOMATICO
-#DH_INICIALIZACAO=MANUAL
-DH_INICIALIZACAO=INTERATIVA
+# AUTOMATIC=data do dia de hoje; hora=12
+# INTERACTIVE=o script solicita os valores via questionamentos.
+#DH_HOW_RUN_SCRIPT=AUTOMATIC
+DH_HOW_RUN_SCRIPT=INTERACTIVE
 
-#############   !!!!!       IMPORTANTE            !!!!     ########
-# Para rodar via cron ajustar manualmente o diretório DIR_CORRENTE no início do
-#       processamento do modelo.
 
 
 ################################################################################
-#                  Funcoes Gerais
+################################################################################
+#
+#                  General Functions
+#
+################################################################################
 ################################################################################
 
 
-terminar_script () {
-      echo -e "\n\n $1 \n\n" ; exit 1
+# Show debug messages for depuration
+f_debug ()
+{
+    [ ${DEBUG} == 1 ] && echo -e "\033[33;1m DEBUG (${1}):${2}=${3}\033[m \n"
+}
+
+
+#   terminar_script () {
+shutdown_execution () {
+      echo -e "\n\n $1 \n\n" ; exit $2
 }
 
 
 mensagem () {
-      echo -e "\n\n $1 \n\n" ;
+      echo -e "\n $1 \n" ;
 }
 
 # -------------------------------------------------------------
 #  Funcao de AJUDA para parametros de linha de comando
 # -------------------------------------------------------------
-function ajuda
+function help
 {
-	echo " Uso: \$ $(basename "$0") [OPÇÕES]"
-#	echo " -i no-ifrest|ifrest : no-ifrest (primeira rodada) ifrest (proximas rodadas)"
-#        echo " --clm : Modelo de superfície padrão"
-#        echo " --clm45 : Modelo de superfície CLM45"
-	echo " -ts 2021-06-01-12 : (ano-mes-dia-hora) - data/hora inicial da integração"
-#	echo " -gt2 2017-07-17-00] : (ano-mes-dia-hora) dados globais - data/hora final"
-#	echo " -mdt1 [2017-04-17-00] : (ano-mes-dia-hora) rodada - data/hora inicial"
-#	echo " -mdt2 [2017-06-17-00] : (ano-mes-dia-hora) rodada - data/hora final (melhor usar intervalos MENSAIS)"
-#	echo " -tr mes|dia : duracao temporal da rodada (NAO IMPLEMENTADO) - padrao:mes"
-	echo " -ti 24 | 48 | 72 : tempo resolucao em horas (padrao:24horas)"
-	echo " -r 1p00 | 0p50 | 0p25 : resolucao dos dados globais NCEP (1|0,5|0,25 graus - padrão:1p00)"
-	echo " [ -np 1 ] : numero de processadores usados (OPCIONAL) - padrão:1"
-	echo " [ --use-hwthread-cpus ] : use hardware threads as independent cpus. (OPCIONAL) - padrão: vazio"
-
-	echo " "
-#	echo "Obs.: a) A duracao da primeira rodada sera dada pelo intervalo de"
-#	echo "         tempo entre os valores de -mdt2 e -mdt1 (OBRIGATORIOS)."
-#	echo "      b) As próximas rodadas serão calculadas incrementando o valor"
-#	echo "         do mês, ou seja, se a -mdt2 2017-05-15-12, então a próxima"
-#	echo "         rodada será no intervalo 2017-05-15-12 a 2017-06-15-12."
-	exit 1
-
-}
-
-function res_g_ncep
-{
-    if [ x$1 = x"1p00" ]; then 
-        RES_G_NCEP="1p00"
-    elif [ x$1 = x"0p50" ]; then  
-        RES_G_NCEP="0p50"
-    elif [ x$1 = x"0p25" ]; then
-         RES_G_NCEP="0p25"
-    fi
-	    
+    echo -e " Use: \$ ./$(basename "$0") parameters options\n"
+    echo -e "-- MANDATORY parameters--"
+    echo " -conf A | B | ... Z :domain configuration"
+    echo " -ts 2021-06-01-12 :(yyyy-mm-dd-HH) date-time of start data/hora inicial da integração"
+    echo " -ti 24 | 48 | 72 :(HH) integration time in hours (run time forecast) (default:24h)"
     
-    NUM_PARAM=$(expr $NUM_PARAM + 1)
+    echo -e "\n-- OPTIONAL parameters--"
+    echo " -tiout 3 | 6 :(H) time interval of output (default:3h)"
+    echo " -gd gfs1p00 | gfs0p50 | gfs0p25 | cptec_wrf_5km :global data NCEP-GFS (1|0.5|0.25 degree - default:gfs1p00) OR WRF from CPTEC (5km)"
+    echo " -gti 1 | 3 | 6 :(H) time interval (hours) of global input data (time resolution): 1 for cptec_wrf_5km and 3/6 for gfs (defaults are: 1h for cptec_wrf_5km and 3h for gfs)"
+    echo -e "\n"
+    echo " -np 1 :number of processes to be use: (default=1)"
+    echo " --wrf-time-step 20 :value (in s) of WRF time step (default:each configuration has been defined with some default time step)"
+    
+    echo -e "\n-- OPTIONS --"
+    echo " [--use-hwthread-cpus ] : use hardware threads as independent cpus (default:empty)"
+    echo " [--use-generated-geogrid ] : use file geo_em.d0[03] (geogrid output) generated previously and available in model scripts directory (default: use the program geogrid.exe to generate)"
+    echo " [--use-static-config ] : the script will use the namelist files in their directories. Only need provide the mandatory parameters to verify DIR and INPUT DATA - default: use dynamic generation of the namelist files."
+
+    echo " "
+    echo " -h|--help : for help"
+    echo " -conf -h : for help about domain configurations (not yet implemented)"
+    echo "Observations:\n"
+    echo "  a) The parameter \"tiout\" is for the coarse domain (domain 1). The domain 2 and 3 (if configured) will output data in time interval of 1 hour"
+    echo "  b) There are no guarantee that using virtual processors (hyperthreading) will upgrade performance. Recommendation is one process per core."
+    echo -e "\n-- EXAMPLE --"
+    echo "./runwrf.sh -conf G -ts 2022-01-01-12 -ti 24 -gti 3 -np 4 -gd gfs0p50 --use-generated-geogrid"
+    echo "Configuration G: r_sudeste-SP-MG-PR-MS-2d"
+    echo "Start of simulation: 2022, 1st january at 12 UTC"
+    echo "Time of forecast: 24 hours"
+    echo "Time step of global data: 3 hours"
+    echo "Type and resolution of global data: GFS from NCEP - 0.5 degrees"
+    echo "Use domain configuration (physical) from geogrid.exe"
+
+    
+    shutdown_execution " " 0
+
+}
+
+# -------------------------------------------------------------
+#  Funcao de AJUDA para parametros de linha de comando
+# -------------------------------------------------------------
+# TODO TODO
+function help_for_config_domain
+{
+
+ 	shutdown_execution "TODO-> help about config domains " 0
+}
+
+# -------------------------------------------------------------
+#         Function: set dir variables
+# -------------------------------------------------------------
+# TODO TODO TODO TODO   These data need to come from an external file
+
+function f_set_or_create_dir
+{
+
+    # Em 27abr05: modificação dos diretórios.
+    # Em 31out05: modificação do diretório GFS (do sítio NCEP).
+    # Em 31dez21: new model data dir
+
+#     Example:
+#     model-data-input-global/2021-12-31-12-gfs
+#     DIR_DATA_INPUT=model-data-input-global      THIS FUNCTION
+#      2021-12-31-12-gfs
+
+#     model-data-output/2021-12-31-12_dom_A-SC/wrf-1
+#     DIR_DATA_OUTPUT=model-data-output           THIS FUNCTION
+#     DIR_DOMAIN_OUTPUT=2021-12-31-12_dom_A-SC FUNCTION:   
+
+#     DIR_WRF_OUTPUT=$DIR_DATA_OUTPUT/$DIR_DOMAIN_OUTPUT/wrf-[a-z]   main processing
+
+#     DIR_DATA_OUTPUT/DIR_DOMAIN_OUTPUT/DIR_WRF_OUTPUT
+#     model-data-output/2021-12-31-12_dom_A-SC/wrf-1        
+#        DIR_WRF_OUTPUT=${DIR_DATA_OUTPUT}/${DIR_DOMAIN_OUTPUT}/wrf-$retorno
+
+#     subdir:  `yyyy-mm-dd-HH-gfs` (for GFS) yyyy-mm-dd-HH-cptec-wrf (for WRF from CPTEC)
+
+ # Directory for the OUTPUT data from the model: `model-data-output`
+ #    subdir: `yyyy-mm-dd-HH_dom_A-SC`    `yyyy-mm-dd-HH_dom_F-SP`
+ #    Each is for some domain and data-time of initialization. If there a need more than once specific configuration (for example, diferent physics), each one outputs in diferent directory
+ #    subdir: `yyyy-mm-dd-HH_dom_A-SC/wrf-1...10` and so on        
+        
+#     DIR_DATA_OUTPUT/DIR_DOMAIN_OUTPUT/DIR_WRF_OUTPUT
+#     model-data-output/2021-12-31-12_dom_A-SC/wrf-1
+
+    # Diretório PRINCIPAL => diretório do USUÁRIO
+    export USER_PATH=$HOME
+    # Diretório dos arquivos executáveis (pgi, gradsc, mm5)
+    export BIN_PATH=$USER_PATH/bin
+    # Diretório dos binários
+    BINARIOS_PATH=$USER_PATH/binarios
+    # Diretório de TRABALHO. Em 03jul10: diretórios de trabalho para o WRF.
+    WRF_PATH=$USER_PATH/bin/WRF
+    # Em 06jul10: será exportada para ser usada pelos scripts do WPS.
+    export WPS_PATH=$USER_PATH/bin/WPS
+    
+    # Diretório dos arquivos de terreno. O nome do diretório é aquele da descompactação.
+    GEODATA_PATH=$USER_PATH/bin/WPS_GEOG
+    
+    # Diretório backup dos arquivos de dados da rodada corrente.
+    #    06jul10: será exportado em função do wps.
+    #    23dez21: the organization of directories will change. Vide Readme
+    # 
+    DIR_DATA_INPUT=$USER_PATH/model-data-input-global
+    DIR_DATA_OUTPUT=$USER_PATH/model-data-output
+
+    # If dirs do not exist, create it.
+    if [ ! -d ${DIR_DATA_INPUT} ]; then
+        mkdir -p ${DIR_DATA_INPUT}
+        [ $? -ne 0 ] && shutdown_execution "ERROR: problem in creating dir ${DIR_DATA_INPUT}" 1
+    fi
+    if [ ! -d ${DIR_DATA_OUTPUT} ]; then
+        mkdir -p ${DIR_DATA_OUTPUT}
+        [ $? -ne 0 ] && shutdown_execution "ERROR: problem in creating dir ${DIR_DATA_OUTPUT}" 1
+    fi
 }
 
 
-# Tempo (data-hora) início da integração
+# Em 02jan22: set the variable that will contain the CONFIGURATION (DOMAIN config)
+#             and the origin of global data (that is dependent from configuration)
+function f_config_of_domain
+{
+    if [ ! -z $1 ]; then
+        if [ $1 = "-h" ] -o [ $1 = "-H" ]; then
+            ajuda_configuracoes
+        fi
+    else
+        shutdown_execution 1
+    fi
+}
+
+# Time (DATE-HOUR) of the start of integration
 function t_start
 {
-    ANO=$(echo $1 | cut -d- -f 1)
-    MES=$(echo $1 | cut -d- -f 2)
-    DIA=$(echo $1 | cut -d- -f 3) 
-    HORA=$(echo $1 | cut -d- -f 4)
 
-    NUM_PARAM=$(expr $NUM_PARAM + 1)
+    # Test the format: 2022-01-01-00
+    grep -E '^20[1-2][0-9]-[0-1][0-9]-[0-3][0-9]-(00|06|12|18)' <<<  $1 > /dev/null
+    [[ $? -ne 0 ]] && mensagem "ERROR in the parameter ts:$1 " && return 1
+
+    START_YEAR=$(cut -d- -f 1 <<<  $1)
+    START_MONTH=$(cut -d- -f 2 <<<  $1)
+    START_DAY=$(cut -d- -f 3 <<<  $1)
+    START_HOUR=$(cut -d- -f 4 <<<  $1)
+
+    NUM_PARAM=$(( $NUM_PARAM + 1))
 }
 
 
 # Tempo de integração: 24, 48 ou 72 horas
+# Time of integration in hours.
+# namelist.input parameter: run_hours
 function t_integracao
 {
-    if [ x$1 = x"24" ]; then 
-        TEMPO_INTEGRACAO=24; export _TIMAX=1440
-    elif [ x$1 = x"48" ]; then
-        TEMPO_INTEGRACAO=48; export _TIMAX=2880
-    elif [ x$1 = x"72" ]; then
-         TEMPO_INTEGRACAO=72; export _TIMAX=4320
-    fi
-
-    NUM_PARAM=$(expr $NUM_PARAM + 1)
+    # Test if ${1} is only number
+    if [[ ! $1 =~ ^[0-9]+$ ]] ; then
+        mensagem "ERROR in the parameter ti:$1 "
+        return 1
+    fi    
+    case $1 in
+        24) RUN_TIME_HOURS=24 ;;
+        48) RUN_TIME_HOURS=48 ;;
+        72) RUN_TIME_HOURS=72 ;;
+        *) mensagem "ERROR in the parameter ti:$1 " ; return 1 ;;
+    esac    
+    
+    NUM_PARAM=$(( $NUM_PARAM + 1))
 }
 
 
+# Sets the GLOBAL_DATA and GLOBAL_DATA_SOURCE used 
+# to generate the dir: DIR_WPS_INPUT
+function f_global_data
+{
+    case ${1} in
+        gfs1p00) GLOBAL_DATA="gfs1p00"; GLOBAL_DATA_SOURCE="gfs" ;;
+        gfs0p50) GLOBAL_DATA="gfs0p50"; GLOBAL_DATA_SOURCE="gfs" ;;
+        gfs0p25) GLOBAL_DATA="gfs0p25"; GLOBAL_DATA_SOURCE="gfs" ;;
+        cptec_wrf_5km) GLOBAL_DATA="cptec_wrf_5km"; GLOBAL_DATA_SOURCE="cptec-wrf" ;;
+        *) mensagem "ERROR in the parameter gd:${1} " ; return 1 ;;
+    esac
+    
+    # 20220205: the global data (source and RESOLUTION) are determined by
+    #           the choose of the configuration (it is to avoid problems in downscaling)
+    #           But if the user wants to modify, then he can do so.
+    
+    # NUM_PARAM=$(( $NUM_PARAM + 1))
+}
+
+
+# -------------------------------------------------------------
+#  Function: set the parameters of namelist files for WPS and WRF
+#  TODO TODO Use an external script to process the namelist
+#  TODO TODO   parameters that will be read from a text file.
+#  TODO TODO The aim is to put out the configuration values from
+#  TODO TODO   this script file.
+# -------------------------------------------------------------
+function f_set_domain_and_phys_parameters {
+    # process-parameters-dom-and-phy.sh
+    
+    # Other option for CONFIG: declare it as uppercase: declare -u CONFIG (in the main section of this script)
+    # Obs: use of regex in Bash
+    if [[ ${1} =~ [:alfa:]* ]] && [[ ${#1} -eq 1 ]]; then
+        CONFIG=$(tr [:lower:] [:upper:] <<< ${1})
+        if [[ ${CONFIG} =~ ${CONFIG_VALUES} ]] && [ $? -ne 0 ] ; then
+            mensagem "ERROR in the parameter conf:${1} The value is out of the config domains available:$CONFIG_VALUES "
+            return 1
+            #shutdown_execution "The value {$1} is out of the config domains available {$CONFIG_VALUES}. Exiting ... 1"
+        fi
+    else
+        mensagem "ERROR in the parameter conf:${1} The value is INCORRECT."
+        return 1
+        #shutdown_execution "The value {$1} is INCORRECT. Exiting ... 1"
+    fi
+    
+
+case $CONFIG in
+[aA]) # ********************  3 domínios: cone sul da AS -> região sul (Brasil) -> RS e SC
+        CONFIG_NAME="conesul-RS-SC-PR-3d"
+        
+        export _MAX_DOMAIN=3
+
+        # 20220131: inclusion in this configuration, but can be 
+        #             modified.
+        export _WRF_TIME_STEP=108
+        
+        # 20220131:this is the parameter history_interval of namelist.input (MINUTES)
+        #         Frequency at which to write data to the history (wrfout) file. 
+        if [ -z ${_T_INTERVAL_OUTPUT_1} ]; then  # Not set by the user
+            export _T_INTERVAL_OUTPUT_1=180  ## interval time: 3 h for DOMAIN 1
+        fi
+        export _T_INTERVAL_OUTPUT_2=60  ## interval time: 1 h for DOMAIN 2
+        export _T_INTERVAL_OUTPUT_3=60  ## interval time: 1 h for DOMAIN 3
+
+        
+        
+        export _PARENT_ID_2=1;  export _PARENT_ID_3=2
+        export _I_PARENT_START_2=15 ; export _I_PARENT_START_3=70
+        export _J_PARENT_START_2=49 ; export _J_PARENT_START_3=75
+        
+        export _GEODATA_RES_1=5m; export _GEODATA_RES_2=2m; export _GEODATA_RES_3=30s
+        export _MAP_PROJECTION=lambert
+        export _E_WE_1=100;  export _E_WE_2=214;  export _E_WE_3=367
+        export _E_SN_1=140;  export _E_SN_2=205;  export _E_SN_3=307
+
+        export _DX_1=18000
+        export _DY_1=18000
+        
+        # Spatial resolutions of nests are calculated from parent_grid_ratio.
+        # No more necessary.
+        export _DX_2=6000; export _DX_3=2000
+        export _DY_2=6000; export _DY_3=2000
+
+        export _REF_LAT=-31.41;  export _REF_LON=-53.435
+        export _TRUELAT1=-31.41; export _TRUELAT2=-31.41; export _STAND_LON=-53.435
+        
+        # 20211223: conf determines the choice of global data (source and/or
+        #           resolution and interval)
+        GLOBAL_DATE_TIME_INTERVAL=3  # 3 hours
+        GLOBAL_DATA=gfs0p50   # GFS_0p50  GFS_0p25   NCEP_WRF_1km
+        GLOBAL_DATA_SOURCE="gfs"
+        
+        # Included to considerer more ratio options
+        export _PARENT_RATIO_2=3   # Best values: 3 or 5
+        export _PARENT_RATIO_3=3   # Best values: 3 or 5
+        
+        export  _FEEDBACK=1 # 0 one-way no feedback    1 two-way w/ feedbak (default)
+        export  _SMOOTH=2   # Default=2
+        
+        export _MP_PHYSICS_1=3; export _MP_PHYSICS_2=3;  export _MP_PHYSICS_3=3
+        export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
+        export _CU_PHYSICS_1=1; _CU_PHYSICS_2=1; _CU_PHYSICS_3=0;
+
+        
+        export _E_VERT=35  # Number o vertical levels. The levels are
+                           #   automatically calculated (auto_levels_opt=2)
+                           #   stretching in lower and in top of the atmosphere.   
+
+;;
+
+[bB]) # ****************************
+        CONFIG_NAME="r_sul-RS-SC-2d"
+        
+        export _MAX_DOMAIN=2
+
+        # 20220131: inclusion in this configuration, but can be 
+        #             modified.
+        export _WRF_TIME_STEP=60
+        
+        # 20220131:this is the parameter history_interval of namelist.input (MINUTES)
+        #         Frequency at which to write data to the history (wrfout) file. 
+        if [ -z ${_T_INTERVAL_OUTPUT_1} ]; then  # Not set by the user
+            export _T_INTERVAL_OUTPUT_1=180  ## interval time: 3 h for DOMAIN 1
+        fi
+        export _T_INTERVAL_OUTPUT_2=60  ## interval time: 1 h for DOMAIN 2
+        export _T_INTERVAL_OUTPUT_3=60  ## interval time: 1 h for DOMAIN 3       
+        
+        export _PARENT_ID_2=1;  export _PARENT_ID_3=""
+        export _I_PARENT_START_2=51 ; export _I_PARENT_START_3=""
+        export _J_PARENT_START_2=71 ; export _J_PARENT_START_3=""
+        
+        export _GEODATA_RES_1=2m; export _GEODATA_RES_2=30s; export _GEODATA_RES_3=""
+        export _MAP_PROJECTION=lambert
+        export _E_WE_1=150;  export _E_WE_2=391;  export _E_WE_3=""
+        export _E_SN_1=160;  export _E_SN_2=371;  export _E_SN_3=""
+
+        export _DX_1=10000
+        export _DY_1=10000
+        
+        # Spatial resolutions of nests are calculated from parent_grid_ratio.
+        # No more necessary.
+        export _DX_2=2000; export _DX_3=""
+        export _DY_2=2000; export _DY_3=""
+
+        export _REF_LAT=-30.477;   export _REF_LON=-53.302
+        export _TRUELAT1=-30.477; export _TRUELAT2=-30.477; export _STAND_LON=-53.302
+        
+        # 20211223: conf determines the choice of global data (source and/or
+        #           resolution and interval)
+        GLOBAL_DATE_TIME_INTERVAL=3   # 3 hours
+        GLOBAL_DATA=gfs0p25   # GFS_0p50  GFS_0p25   NCEP_WRF_1km
+        GLOBAL_DATA_SOURCE="gfs"
+                
+        # Included to considerer more ratio options
+        export _PARENT_RATIO_2=5   # Best values: 3 or 5
+        export _PARENT_RATIO_3=""   # Best values: 3 or 5
+        
+        export  _FEEDBACK=1 # 0 one-way no feedback    1 two-way w/ feedbak (default)
+        export  _SMOOTH=2   # Default=2
+        
+        export _MP_PHYSICS_1=3; export _MP_PHYSICS_2=3;  export _MP_PHYSICS_3=3
+        export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
+        export _CU_PHYSICS_1=1; _CU_PHYSICS_2=1; _CU_PHYSICS_3=0;
+
+        
+        export _E_VERT=35  # Number o vertical levels. The levels are
+                           #   automatically calculated (auto_levels_opt=2)
+                           #   stretching in lower and in top of the atmosphere.    
+       
+;;
+
+
+[cC]) # ********************************************
+        CONFIG_NAME="r_sul-SC-2d-high"
+        
+        export _MAX_DOMAIN=2
+
+        # 20220131: inclusion in this configuration, but can be 
+        #             modified.
+        export _WRF_TIME_STEP=30    
+        
+        # 20220131:this is the parameter history_interval of namelist.input (MINUTES)
+        #         Frequency at which to write data to the history (wrfout) file. 
+        if [ -z ${_T_INTERVAL_OUTPUT_1} ]; then  # Not set by the user
+            export _T_INTERVAL_OUTPUT_1=180  ## interval time: 3 h for DOMAIN 1
+        fi
+        export _T_INTERVAL_OUTPUT_2=60  ## interval time: 1 h for DOMAIN 2
+        export _T_INTERVAL_OUTPUT_3=60  ## interval time: 1 h for DOMAIN 3
+
+        
+        
+        export _PARENT_ID_2=1;  export _PARENT_ID_3=""
+        export _I_PARENT_START_2=107 ; export _I_PARENT_START_3=""
+        export _J_PARENT_START_2=126 ; export _J_PARENT_START_3=""
+        
+        export _GEODATA_RES_1=2m; export _GEODATA_RES_2=30s; export _GEODATA_RES_3=""
+        export _MAP_PROJECTION=lambert
+        export _E_WE_1=298;  export _E_WE_2=751;  export _E_WE_3=""
+        export _E_SN_1=277;  export _E_SN_2=516;  export _E_SN_3=""
+
+        export _DX_1=5000
+        export _DY_1=5000
+        
+        # Spatial resolutions of nests are calculated from parent_grid_ratio.
+        # No more necessary.
+        export _DX_2=1000; export _DX_3=""
+        export _DY_2=1000; export _DY_3=""
+
+        export _REF_LAT=-28.921;   export _REF_LON=-53.524
+        export _TRUELAT1=-28.921; export _TRUELAT2=-28.921; export _STAND_LON=-53.524
+        
+        # 20211223: conf determines the choice of global data (source and/or
+        #           resolution and interval)
+        GLOBAL_DATE_TIME_INTERVAL=3   # 3 hours
+        GLOBAL_DATA=gfs0p25   # GFS_0p50  GFS_0p25   NCEP_WRF_1km
+        GLOBAL_DATA_SOURCE="gfs"
+                
+        # Included to considerer more ratio options
+        export _PARENT_RATIO_2=5   # Best values: 3 or 5
+        export _PARENT_RATIO_3=""   # Best values: 3 or 5
+        
+        export  _FEEDBACK=1 # 0 one-way no feedback    1 two-way w/ feedbak (default)
+        export  _SMOOTH=2   # Default=2
+        
+        export _MP_PHYSICS_1=3; export _MP_PHYSICS_2=3;  export _MP_PHYSICS_3=3
+        export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
+        export _CU_PHYSICS_1=1; _CU_PHYSICS_2=1; _CU_PHYSICS_3=0;
+
+        
+        export _E_VERT=35  # Number o vertical levels. The levels are
+                           #   automatically calculated (auto_levels_opt=2)
+                           #   stretching in lower and in top of the atmosphere.   
+
+
+;;
+[dD])
+        CONFIG_NAME="santa-catarina-1d-high"
+        
+        export _MAX_DOMAIN=1
+
+        # 20220131: inclusion in this configuration, but can be 
+        #             modified.
+        export _WRF_TIME_STEP=6  
+        
+        # 20220131:this is the parameter history_interval of namelist.input (MINUTES)
+        #         Frequency at which to write data to the history (wrfout) file. 
+        if [ -z ${_T_INTERVAL_OUTPUT_1} ]; then  # Not set by the user
+            export _T_INTERVAL_OUTPUT_1=180  ## interval time: 3 h for DOMAIN 1
+        fi
+        export _T_INTERVAL_OUTPUT_2=60  ## interval time: 1 h for DOMAIN 2
+        export _T_INTERVAL_OUTPUT_3=60  ## interval time: 1 h for DOMAIN 3
+
+        
+        
+        export _PARENT_ID_2=1;  export _PARENT_ID_3=""
+        export _I_PARENT_START_2=107 ; export _I_PARENT_START_3=""
+        export _J_PARENT_START_2=126 ; export _J_PARENT_START_3=""
+        
+        export _GEODATA_RES_1=30s; export _GEODATA_RES_2=30s; export _GEODATA_RES_3=""
+        export _MAP_PROJECTION=lambert
+        export _E_WE_1=751;  export _E_WE_2="";  export _E_WE_3=""
+        export _E_SN_1=511;  export _E_SN_2="";  export _E_SN_3=""
+
+        export _DX_1=1000
+        export _DY_1=1000
+        
+        # Spatial resolutions of nests are calculated from parent_grid_ratio.
+        # No more necessary.
+        export _DX_2=""; export _DX_3=""
+        export _DY_2=""; export _DY_3=""
+
+        export _REF_LAT=-27.322;   export _REF_LON=-51.746
+        export _TRUELAT1=-27.322; export _TRUELAT2=-27.322; export _STAND_LON=-51.746
+        
+        # 20211223: conf determines the choice of global data (source and/or
+        #           resolution and interval)
+        GLOBAL_DATE_TIME_INTERVAL=1   #  1 hour
+        GLOBAL_DATA=cptec_wrf_5km   # GFS_0p50  GFS_0p25   NCEP_WRF_1km
+        GLOBAL_DATA_SOURCE="cptec-wrf"
+        
+        # Included to considerer more ratio options
+        export _PARENT_RATIO_2=""   # Best values: 3 or 5
+        export _PARENT_RATIO_3=""   # Best values: 3 or 5
+        
+        export  _FEEDBACK=1 # 0 one-way no feedback    1 two-way w/ feedbak (default)
+        export  _SMOOTH=2   # Default=2
+        
+        export _MP_PHYSICS_1=3; export _MP_PHYSICS_2=3;  export _MP_PHYSICS_3=3
+        export _BL_PBL_PHYSICS
+        _1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
+        export _CU_PHYSICS_1=1; _CU_PHYSICS_2=1; _CU_PHYSICS_3=0;
+
+        
+        export _E_VERT=35  # Number o vertical levels. The levels are
+                           #   automatically calculated (auto_levels_opt=2)
+                           #   stretching in lower and in top of the atmosphere.    
+
+       
+;;
+[eE])
+        CONFIG_NAME="santa-catarina-1d-high-small"
+        
+        export _MAX_DOMAIN=1
+
+        # 20220131: inclusion in this configuration, but can be 
+        #             modified.
+        export _WRF_TIME_STEP=6  
+        
+        # 20220131:this is the parameter history_interval of namelist.input (MINUTES)
+        #         Frequency at which to write data to the history (wrfout) file. 
+        if [ -z ${_T_INTERVAL_OUTPUT_1} ]; then  # Not set by the user
+            export _T_INTERVAL_OUTPUT_1=180  ## interval time: 3 h for DOMAIN 1
+        fi
+        export _T_INTERVAL_OUTPUT_2=60  ## interval time: 1 h for DOMAIN 2
+        export _T_INTERVAL_OUTPUT_3=60  ## interval time: 1 h for DOMAIN 3
+
+        
+        
+        export _PARENT_ID_2="";  export _PARENT_ID_3=""
+        export _I_PARENT_START_2="" ; export _I_PARENT_START_3=""
+        export _J_PARENT_START_2="" ; export _J_PARENT_START_3=""
+        
+        export _GEODATA_RES_1=30s; export _GEODATA_RES_2=""; export _GEODATA_RES_3=""
+        export _MAP_PROJECTION=lambert
+        export _E_WE_1=560;  export _E_WE_2="";  export _E_WE_3=""
+        export _E_SN_1=420;  export _E_SN_2="";  export _E_SN_3=""
+
+        export _DX_1=1000
+        export _DY_1=1000
+        
+        # Spatial resolutions of nests are calculated from parent_grid_ratio.
+        # No more necessary.
+        export _DX_2=""; export _DX_3=""
+        export _DY_2=""; export _DY_3=""
+
+        export _REF_LAT=-27.322;   export _REF_LON=-51.2
+        export _TRUELAT1=-27.322; export _TRUELAT2=-27.322; export _STAND_LON=-50.768
+        
+        # 20211223: conf determines the choice of global data (source and/or
+        #           resolution and interval)
+        GLOBAL_DATE_TIME_INTERVAL=1   # 1 hour
+        GLOBAL_DATA=cptec_wrf_5km   # GFS_0p50  GFS_0p25   NCEP_WRF_1km
+        GLOBAL_DATA_SOURCE="cptec-wrf"
+        
+        # Included to considerer more ratio options
+        export _PARENT_RATIO_2=""   # Best values: 3 or 5
+        export _PARENT_RATIO_3=""   # Best values: 3 or 5
+        
+        export  _FEEDBACK=1 # 0 one-way no feedback    1 two-way w/ feedbak (default)
+        export  _SMOOTH=2   # Default=2
+        
+        export _MP_PHYSICS_1=3; export _MP_PHYSICS_2=3;  export _MP_PHYSICS_3=3
+        export _BL_PBL_PHYSICS
+        _1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
+        export _CU_PHYSICS_1=1; _CU_PHYSICS_2=1; _CU_PHYSICS_3=0;
+
+        
+        export _E_VERT=35  # Number o vertical levels. The levels are
+                           #   automatically calculated (auto_levels_opt=2)
+                           #   stretching in lower and in top of the atmosphere.    
+
+;;
+[fF])
+        CONFIG_NAME="santa-catarina-1d-low-small"
+        
+        export _MAX_DOMAIN=1
+
+        # 20220131: inclusion in this configuration, but can be 
+        #             modified.
+        export _WRF_TIME_STEP=12
+        
+        # 20220131:this is the parameter history_interval of namelist.input (MINUTES)
+        #         Frequency at which to write data to the history (wrfout) file. 
+        if [ -z ${_T_INTERVAL_OUTPUT_1} ]; then  # Not set by the user
+            export _T_INTERVAL_OUTPUT_1=180  ## interval time: 3 h for DOMAIN 1
+        fi
+        export _T_INTERVAL_OUTPUT_2=60  ## interval time: 1 h for DOMAIN 2
+        export _T_INTERVAL_OUTPUT_3=60  ## interval time: 1 h for DOMAIN 3
+
+        
+        
+        export _PARENT_ID_2="";  export _PARENT_ID_3=""
+        export _I_PARENT_START_2="" ; export _I_PARENT_START_3=""
+        export _J_PARENT_START_2="" ; export _J_PARENT_START_3=""
+        
+        export _GEODATA_RES_1=30s; export _GEODATA_RES_2=30s; export _GEODATA_RES_3=""
+        export _MAP_PROJECTION=lambert
+        export _E_WE_1=370;  export _E_WE_2="";  export _E_WE_3=""
+        export _E_SN_1=250;  export _E_SN_2="";  export _E_SN_3=""
+
+        export _DX_1=2000
+        export _DY_1=2000
+        
+        # Spatial resolutions of nests are calculated from parent_grid_ratio.
+        # No more necessary.
+        export _DX_2=""; export _DX_3=""
+        export _DY_2=""; export _DY_3=""
+
+        export _REF_LAT=-27.322;   export _REF_LON=-51.746
+        export _TRUELAT1=-27.322; export _TRUELAT2=-27.322; export _STAND_LON=-51.124
+        
+        # 20211223: conf determines the choice of global data (source and/or
+        #           resolution and interval)
+        GLOBAL_DATE_TIME_INTERVAL=1   # 1 hour
+        GLOBAL_DATA=cptec_wrf_5km   # GFS_0p50  GFS_0p25   NCEP_WRF_1km
+        GLOBAL_DATA_SOURCE="cptec-wrf"
+        
+        # Included to considerer more ratio options
+        export _PARENT_RATIO_2=""   # Best values: 3 or 5
+        export _PARENT_RATIO_3=""   # Best values: 3 or 5
+        
+        export  _FEEDBACK=1 # 0 one-way no feedback    1 two-way w/ feedbak (default)
+        export  _SMOOTH=2   # Default=2
+        
+        export _MP_PHYSICS_1=3; export _MP_PHYSICS_2=3;  export _MP_PHYSICS_3=3
+        export _BL_PBL_PHYSICS
+        _1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
+        export _CU_PHYSICS_1=1; _CU_PHYSICS_2=1; _CU_PHYSICS_3=0;
+
+        
+        export _E_VERT=35  # Number o vertical levels. The levels are
+                           #   automatically calculated (auto_levels_opt=2)
+                           #   stretching in lower and in top of the atmosphere.  
+
+
+;;
+
+[gG]) # ****************************
+        CONFIG_NAME="r_sudeste-SP-MG-PR-MS-2d"
+        
+        export _MAX_DOMAIN=2
+
+        # 20220131: inclusion in this configuration, but can be 
+        #             modified.
+        export _WRF_TIME_STEP=60
+        
+        # 20220131:this is the parameter history_interval of namelist.input (MINUTES)
+        #         Frequency at which to write data to the history (wrfout) file. 
+        if [ -z ${_T_INTERVAL_OUTPUT_1} ]; then  # Not set by the user
+            export _T_INTERVAL_OUTPUT_1=180  ## interval time: 3 h for DOMAIN 1
+        fi
+        export _T_INTERVAL_OUTPUT_2=60  ## interval time: 1 h for DOMAIN 2
+        export _T_INTERVAL_OUTPUT_3=60  ## interval time: 1 h for DOMAIN 3       
+        
+        export _PARENT_ID_2=1;  export _PARENT_ID_3=""
+        export _I_PARENT_START_2=38 ; export _I_PARENT_START_3=""
+        export _J_PARENT_START_2=45 ; export _J_PARENT_START_3=""
+        
+        export _GEODATA_RES_1=2m; export _GEODATA_RES_2=30s; export _GEODATA_RES_3=""
+        export _MAP_PROJECTION=lambert
+        export _E_WE_1=150;  export _E_WE_2=381;  export _E_WE_3=""
+        export _E_SN_1=160;  export _E_SN_2=361;  export _E_SN_3=""
+
+        export _DX_1=10000
+        export _DY_1=10000
+        
+        # Spatial resolutions of nests are calculated from parent_grid_ratio.
+        # No more necessary.
+        export _DX_2=2000; export _DX_3=""
+        export _DY_2=2000; export _DY_3=""
+
+        export _REF_LAT=-22.3;   export _REF_LON=-49
+        export _TRUELAT1=-22.3; export _TRUELAT2=-22.3; export _STAND_LON=-49.791
+        
+        # 20211223: conf determines the choice of global data (source and/or
+        #           resolution and interval)
+        GLOBAL_DATE_TIME_INTERVAL=3    # 3 hours
+        GLOBAL_DATA=gfs0p25   # GFS_0p50  GFS_0p25   NCEP_WRF_1km
+        GLOBAL_DATA_SOURCE="gfs"
+                
+        # Included to considerer more ratio options
+        export _PARENT_RATIO_2=5   # Best values: 3 or 5
+        export _PARENT_RATIO_3=""   # Best values: 3 or 5
+        
+        export  _FEEDBACK=1 # 0 one-way no feedback    1 two-way w/ feedbak (default)
+        export  _SMOOTH=2   # Default=2
+        
+        export _MP_PHYSICS_1=3; export _MP_PHYSICS_2=3;  export _MP_PHYSICS_3=3
+        export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
+        export _CU_PHYSICS_1=1; _CU_PHYSICS_2=1; _CU_PHYSICS_3=0;
+
+        
+        export _E_VERT=35  # Number o vertical levels. The levels are
+                           #   automatically calculated (auto_levels_opt=2)
+                           #   stretching in lower and in top of the atmosphere.    
+       
+;;
+
+[hH]) # Área de Sao Paulo
+      # 3 domínios: AS -> região Sudeste (Brasil) -> litoral São Paulo
+        CONFIG_NAME="sao-paulo-sjcampos"
+        
+        export _MAX_DOMAIN=3
+
+        # 20220131: inclusion in this configuration, but can be 
+        #             modified.
+        export _WRF_TIME_STEP=216
+        
+        # 20220131:this is the parameter history_interval of namelist.input (MINUTES)
+        #         Frequency at which to write data to the history (wrfout) file. 
+        if [ -z ${_T_INTERVAL_OUTPUT_1} ]; then  # Not set by the user
+            export _T_INTERVAL_OUTPUT_1=180  ## interval time: 3 h for DOMAIN 1
+        fi
+        export _T_INTERVAL_OUTPUT_2=60  ## interval time: 1 h for DOMAIN 2
+        export _T_INTERVAL_OUTPUT_3=60  ## interval time: 1 h for DOMAIN 3
+
+        
+        
+        export _PARENT_ID_2=1;  export _PARENT_ID_3=2
+        export _I_PARENT_START_2=54 ; export _I_PARENT_START_3=54
+        export _J_PARENT_START_2=63 ; export _J_PARENT_START_3=62
+        
+        export _GEODATA_RES_1=10m; export _GEODATA_RES_2=2m; export _GEODATA_RES_3=30s
+        export _MAP_PROJECTION=lambert
+        export _E_WE_1=166;  export _E_WE_2=166;  export _E_WE_3=163
+        export _E_SN_1=188;  export _E_SN_2=190;  export _E_SN_3=190
+
+        export _DX_1=36000
+        export _DY_1=36000
+        
+        # Spatial resolutions of nests are calculated from parent_grid_ratio.
+        # No more necessary.
+        export _DX_2=12000; export _DX_3=4000
+        export _DY_2=12000; export _DY_3=4000
+
+        export _REF_LAT=-23.33;  export _REF_LON=-44.8
+        export _TRUELAT1=-22.522; export _TRUELAT2=-22.522; export _STAND_LON=-44.902
+        
+        # 20211223: conf determines the choice of global data (source and/or
+        #           resolution and interval)
+        GLOBAL_DATE_TIME_INTERVAL=3    # 3 hours
+        GLOBAL_DATA=gfs0p25   # GFS_0p50  GFS_0p25   NCEP_WRF_1km
+        GLOBAL_DATA_SOURCE="gfs"
+        
+        # Included to considerer more ratio options
+        export _PARENT_RATIO_2=3   # Best values: 3 or 5
+        export _PARENT_RATIO_3=3   # Best values: 3 or 5
+        
+        export  _FEEDBACK=1 # 0 one-way no feedback    1 two-way w/ feedbak (default)
+        export  _SMOOTH=2   # Default=2
+        
+        export _MP_PHYSICS_1=3; export _MP_PHYSICS_2=3;  export _MP_PHYSICS_3=3
+        export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
+        export _CU_PHYSICS_1=1; _CU_PHYSICS_2=1; _CU_PHYSICS_3=0;
+
+        
+        export _E_VERT=35  # Number o vertical levels. The levels are
+                           #   automatically calculated (auto_levels_opt=2)
+                           #   stretching in lower and in top of the atmosphere.    
+
+    
+;;
+[iI]) # América do Sul -> Maranhão
+        CONFIG_NAME="americasul-r_norte-MA-3d"       
+
+        export _MAX_DOMAIN=3
+
+        # 20220131: inclusion in this configuration, but can be 
+        #             modified.
+        export _WRF_TIME_STEP=162
+        
+        # 20220131:this is the parameter history_interval of namelist.input (MINUTES)
+        #         Frequency at which to write data to the history (wrfout) file. 
+        if [ -z ${_T_INTERVAL_OUTPUT_1} ]; then  # Not set by the user
+            export _T_INTERVAL_OUTPUT_1=180  ## interval time: 3 h for DOMAIN 1
+        fi
+        export _T_INTERVAL_OUTPUT_2=60  ## interval time: 1 h for DOMAIN 2
+        export _T_INTERVAL_OUTPUT_3=60  ## interval time: 1 h for DOMAIN 3
+        
+        export _PARENT_ID_2=1;  export _PARENT_ID_3=2
+        export _I_PARENT_START_2=58 ; export _I_PARENT_START_3=54
+        export _J_PARENT_START_2=65 ; export _J_PARENT_START_3=62
+        
+        export _GEODATA_RES_1=10m; export _GEODATA_RES_2=2m; export _GEODATA_RES_3=30s
+        export _MAP_PROJECTION=mercator
+        export _E_WE_1=166;  export _E_WE_2=154;  export _E_WE_3=142
+        export _E_SN_1=188;  export _E_SN_2=178;  export _E_SN_3=166
+
+        export _DX_1=27000
+        export _DY_1=27000
+        
+        # Spatial resolutions of nests are calculated from parent_grid_ratio.
+        # No more necessary.
+        export _DX_2=9000; export _DX_3=3000
+        export _DY_2=9000; export _DY_3=3000
+
+        export _REF_LAT=-2.5;  export _REF_LON=-44.5
+        export _TRUELAT1=-2.5; export _TRUELAT2=0; export _STAND_LON=-44.547
+        
+        # 20211223: conf determines the choice of global data (source and/or
+        #           resolution and interval)
+        GLOBAL_DATE_TIME_INTERVAL=3    # 3 hours
+        GLOBAL_DATA=gfs0p25   # GFS_0p50  GFS_0p25   NCEP_WRF_1km
+        GLOBAL_DATA_SOURCE="gfs"
+        
+        # Included to considerer more ratio options
+        export _PARENT_RATIO_2=3   # Best values: 3 or 5
+        export _PARENT_RATIO_3=3   # Best values: 3 or 5
+        
+        export  _FEEDBACK=1 # 0 one-way no feedback    1 two-way w/ feedbak (default)
+        export  _SMOOTH=2   # Default=2
+        
+        export _MP_PHYSICS_1=3; export _MP_PHYSICS_2=3;  export _MP_PHYSICS_3=3
+        export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
+        export _CU_PHYSICS_1=1; _CU_PHYSICS_2=1; _CU_PHYSICS_3=0;
+
+        
+        export _E_VERT=35  # Number o vertical levels. The levels are
+                           #   automatically calculated (auto_levels_opt=2)
+                           #   stretching in lower and in top of the atmosphere.    
+
+;;
+
+[jJ]) # Regiões Norte e Nordeste -> Maranhão
+        CONFIG_NAME="r_norte-r_nordeste-MA-2d-low"
+        
+        export _MAX_DOMAIN=2
+
+        # 20220131: inclusion in this configuration, but can be 
+        #             modified.
+        export _WRF_TIME_STEP=216  
+        
+        # 20220131:this is the parameter history_interval of namelist.input (MINUTES)
+        #         Frequency at which to write data to the history (wrfout) file. 
+        if [ -z ${_T_INTERVAL_OUTPUT_1} ]; then  # Not set by the user
+            export _T_INTERVAL_OUTPUT_1=180  ## interval time: 3 h for DOMAIN 1
+        fi
+        export _T_INTERVAL_OUTPUT_2=60  ## interval time: 1 h for DOMAIN 2
+        export _T_INTERVAL_OUTPUT_3=60  ## interval time: 1 h for DOMAIN 3
+   
+        
+        export _PARENT_ID_2=1;  export _PARENT_ID_3=""
+        export _I_PARENT_START_2=40 ; export _I_PARENT_START_3=""
+        export _J_PARENT_START_2=32 ; export _J_PARENT_START_3=""
+        
+        export _GEODATA_RES_1=10m; export _GEODATA_RES_2=5m; export _GEODATA_RES_3=""
+        export _MAP_PROJECTION=mercartor
+        export _E_WE_1=100;  export _E_WE_2=64;  export _E_WE_3=""
+        export _E_SN_1=80;  export _E_SN_2=49;  export _E_SN_3=""
+
+        export _DX_1=36000
+        export _DY_1=36000
+        
+        # Spatial resolutions of nests are calculated from parent_grid_ratio.
+        # No more necessary.
+        export _DX_2=12000; export _DX_3=""
+        export _DY_2=12000; export _DY_3=""
+
+        export _REF_LAT=-2.5;   export _REF_LON=-44.5
+        export _TRUELAT1=-3.857; export _TRUELAT2=0; export _STAND_LON=-46.147
+        
+        # 20211223: conf determines the choice of global data (source and/or
+        #           resolution and interval)
+        GLOBAL_DATE_TIME_INTERVAL=3    # 3 hours
+        GLOBAL_DATA=gfs0p25   # GFS_0p50  GFS_0p25   NCEP_WRF_1km
+        GLOBAL_DATA_SOURCE="gfs"
+                
+        # Included to considerer more ratio options
+        export _PARENT_RATIO_2=3   # Best values: 3 or 5
+        export _PARENT_RATIO_3=""   # Best values: 3 or 5
+        
+        export  _FEEDBACK=1 # 0 one-way no feedback    1 two-way w/ feedbak (default)
+        export  _SMOOTH=2   # Default=2
+        
+        export _MP_PHYSICS_1=3; export _MP_PHYSICS_2=3;  export _MP_PHYSICS_3=3
+        export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
+        export _CU_PHYSICS_1=1; _CU_PHYSICS_2=1; _CU_PHYSICS_3=0;
+
+        
+        export _E_VERT=35  # Number o vertical levels. The levels are
+                           #   automatically calculated (auto_levels_opt=2)
+                           #   stretching in lower and in top of the atmosphere.   
+
+;; 
+
+
+[kK]) # Alcântara
+        CONFIG_NAME="r_norte-MA-2d-high"
+        
+        export _MAX_DOMAIN=2
+
+        # 20220131: inclusion in this configuration, but can be 
+        #             modified.
+        export _WRF_TIME_STEP=108    
+        
+        # 20220131:this is the parameter history_interval of namelist.input (MINUTES)
+        #         Frequency at which to write data to the history (wrfout) file. 
+        if [ -z ${_T_INTERVAL_OUTPUT_1} ]; then  # Not set by the user
+            export _T_INTERVAL_OUTPUT_1=180  ## interval time: 3 h for DOMAIN 1
+        fi
+        export _T_INTERVAL_OUTPUT_2=60  ## interval time: 1 h for DOMAIN 2
+        export _T_INTERVAL_OUTPUT_3=60  ## interval time: 1 h for DOMAIN 3
+   
+        
+        export _PARENT_ID_2=1;  export _PARENT_ID_3=""
+        export _I_PARENT_START_2=40 ; export _I_PARENT_START_3=""
+        export _J_PARENT_START_2=33 ; export _J_PARENT_START_3=""
+        
+        export _GEODATA_RES_1=5m; export _GEODATA_RES_2=2m; export _GEODATA_RES_3=""
+        export _MAP_PROJECTION=mercartor
+        export _E_WE_1=100;  export _E_WE_2=64;  export _E_WE_3=""
+        export _E_SN_1=80;  export _E_SN_2=49;  export _E_SN_3=""
+
+        export _DX_1=18000
+        export _DY_1=18000
+        
+        # Spatial resolutions of nests are calculated from parent_grid_ratio.
+        # No more necessary.
+        export _DX_2=6000; export _DX_3=""
+        export _DY_2=6000; export _DY_3=""
+
+        export _REF_LAT=-2.5;   export _REF_LON=-44.5
+        export _TRUELAT1=-2.613; export _TRUELAT2=0; export _STAND_LON=-44.014
+        
+        # 20211223: conf determines the choice of global data (source and/or
+        #           resolution and interval)
+        GLOBAL_DATE_TIME_INTERVAL=3    # 3 hours
+        GLOBAL_DATA=gfs0p25   # GFS_0p50  GFS_0p25   NCEP_WRF_1km
+        GLOBAL_DATA_SOURCE="gfs"
+                
+        # Included to considerer more ratio options
+        export _PARENT_RATIO_2=3   # Best values: 3 or 5
+        export _PARENT_RATIO_3=""   # Best values: 3 or 5
+        
+        export  _FEEDBACK=1 # 0 one-way no feedback    1 two-way w/ feedbak (default)
+        export  _SMOOTH=2   # Default=2
+        
+        export _MP_PHYSICS_1=3; export _MP_PHYSICS_2=3;  export _MP_PHYSICS_3=3
+        export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
+        export _CU_PHYSICS_1=1; _CU_PHYSICS_2=1; _CU_PHYSICS_3=0;
+
+        
+        export _E_VERT=35  # Number o vertical levels. The levels are
+                           #   automatically calculated (auto_levels_opt=2)
+                           #   stretching in lower and in top of the atmosphere.   
+
+;;
+
+*) echo "Não válida ..."
+esac
+    
+    NUM_PARAM=$(( $NUM_PARAM + 1))
+    
+    return 0    
+}
+
+
+# ##############################################################################
+
+
+
+
+# Função para configurar as variáveis de TEMPO e calcular DATAS
+# Em 18out2021: considerando a versão do namelist da v WRF 4.3, a data
+#   final é obtida pelo próprio programa através de: DATA_INICIAL + run_hours
+# 20220203: the code real.exe expects ENDING information in the namelist.input 
+
+function t_calcular_data_hora_final
+{
+   
+    START_YEAR=$1
+    START_MONTH=$2
+    START_DAY=$3
+    START_HOUR=$4    
+    
+    END_HOUR=$4
+    END_DAY=$3
+    END_MONTH=$2
+    END_YEAR=$1
+
+    # 20220203: ERROR for this type of construction
+    # RESULT=$(( ${START_DAY} + 1 )) when START_DAY=(08|09)
+    # bash: 05 + 09: value too great for base (error token is "09")
+    # Again, attention: When a numerical format expects a number, the internal printf-command
+    #   will use the common Bash arithmetic rules regarding the base. A command like the
+    #   following example will throw an error, since 08 is not a valid octal number (00 to 07!):printf '%d\n' 08
+    # SOLUTION: use expr
+
+    declare -i RESULT
+    
+    if [ x"${RUN_TIME_HOURS}" = x"24" ]
+    then
+        RESULT=$( expr ${START_DAY} + 1 )
+        END_DAY=$(printf %02d $RESULT)
+    fi
+        
+    if [ x"${RUN_TIME_HOURS}" = x"48" ]
+    then
+        RESULT=$( expr ${START_DAY} + 2 )
+        END_DAY=$(printf %02d $RESULT)
+    fi
+        
+
+    if [ x"${RUN_TIME_HOURS}" = x"72" ]
+    then
+        RESULT=$( expr ${START_DAY} + 3 )
+        END_DAY=$(printf %02d $RESULT)
+    fi
+
+    # Month: FEBRUARY
+    # LEAP YEAR:
+    RESULT=$( expr ${START_YEAR} % 4 )
+    LEAP="no"
+    [ $RESULT -eq 0 ] && LEAP="yes"
+    
+    if [ x"${START_MONTH}" = x"02" ] && [ ${LEAP} == "yes" ]; then
+        [ "${END_DAY}" -eq 29 ] && END_MONTH="02"
+        [ "${END_DAY}" -gt 30 ] && END_MONTH="03"
+    elif [ x"${START_MONTH}" = x"02" ] && [ ${LEAP} == "no" ]; then        
+        [ "${END_DAY}" -ge 29 ] && END_MONTH="03"
+        END_DAY=$(printf %02d 01)
+    fi
+
+    # Month (30 days): april, june, september, november
+    if [ x"${START_MONTH}" = x"04" -o x"${START_MONTH}" = x"06" -o x"${START_MONTH}" = x"09" -o x"${START_MONTH}" = x"11" ]; then 
+        if [ ${END_DAY} -ge 31 ]; then
+            RESULT=$( expr ${START_MONTH} + 1 )
+            END_MONTH=$(printf %02d ${RESULT})
+            
+            RESULT=$( expr ${END_DAY} - 30 )
+            END_DAY=$(printf %02d $RESULT)
+        fi
+    fi
+
+    # Month (31 days): january, march, may, july, august, october
+    if [ x"${START_MONTH}" = x"01" -o x"${START_MONTH}" = x"03" -o x"${START_MONTH}" = x"05" -o x"${START_MONTH}" = x"07" -o  x"${START_MONTH}" = x"08" -o x"${START_MONTH}" = x"10" ]; then
+        if [ ${END_DAY} -ge 32 ]; then
+            RESULT=$( expr ${START_MONTH} + 1 )
+            END_MONTH=$(printf %02d ${RESULT})
+            
+            RESULT=$( expr ${START_DAY} - 31 )
+            END_DAY=$(printf %02d $RESULT)
+        fi
+    fi    
+
+
+    # Month (31 days): december
+    if [ x"${START_MONTH}" = x"12" ]; then
+        if [ ${START_DAY} -ge 32 ]; then
+            RESULT=$( expr ${START_YEAR} + 1 )
+            END_YEAR=$(printf %02d $RESULT)
+
+            END_MONTH="01"
+
+            RESULT=$( expr ${START_DAY} - 31 )
+            END_DAY=$(printf %02d $RESULT)
+        fi
+    fi    
+    
+#    unset I_START_YEAR I_START_MONTH I_START_DAY I_START_HOUR
+    unset RESULT
+
+}
+# FIM: função t_calcular_data_hora_final
+
+
 ################################################################################
 ################################################################################
 #
-#                                FUNÇÕES DE INICIALIZAÇÃO
+#                     FUNÇÕES DE INICIALIZAÇÃO
 #
 ################################################################################
 ################################################################################
+
+# if this script is run through cron, then it will be automatic
+# TODO this is not yet implemented
+if [ $DH_HOW_RUN_SCRIPT = "AUTOMATIC" ]; then
+    # HOUR=$1 ideally, this information need to be passed via command line
+    #         parameter
+    HOUR=12
+    YEAR=`date +%Y` ; MONTH=`date +%m` ; DAY=`date +%d`
+    START_YEAR=$YEAR ; START_MONTH=$MONTH ; START_DAY=$DAY ; START_HOUR=$HOUR
+    opcoes_rodada
+fi
+
+
 
 # Em 15ago10: inclusão variáveis _IMVDIF e _ISOIL. O padrão permite
 #             PBL 2 (Blackada) e 5 (MRF)
@@ -216,823 +1243,550 @@ inicializacao_interativa () {
       echo -n ' Escolha a opcao: '
       read resposta
       case $resposta in
-	      [aA]) CONFIG=A; export _TISTEP=216 ; inicializa_opcoes_wrf ;;
-	      [bB]) CONFIG=B; export _TISTEP=45 ; inicializa_opcoes_wrf ;;
-	      [cC]) CONFIG=C; export _TISTEP=45 ; inicializa_opcoes_wrf ;;
-	      [dD]) CONFIG=D; export _TISTEP=90 ; inicializa_opcoes_wrf ;;
-	      [eE]) CONFIG=E; export _TISTEP=90 ; inicializa_opcoes_wrf ;;
-	      [fF]) CONFIG=F; export _TISTEP=90 ; inicializa_opcoes_wrf ;;
-	      [gG]) CONFIG=G; export _TISTEP=90 ; inicializa_opcoes_wrf ;;
-	      [hH]) CONFIG=H; export _TISTEP=90 ; inicializa_opcoes_wrf ;;
-	      [iI]) CONFIG=I; export _TISTEP=90 ; inicializa_opcoes_wrf ;;
-	      [jJ]) CONFIG=J; export _TISTEP=90 ; inicializa_opcoes_wrf ;;
-	      [kK]) CONFIG=K; export _TISTEP=45 ; inicializa_opcoes_wrf ;;
-	      [lL]) CONFIG=L; export _TISTEP=108 ; inicializa_opcoes_wrf ;;
-	      [xX]) terminar_script "Saindo ..." ;;
-	      *) terminar_script "Opcao desconhecida. Saindo ..." ;;
+	      [aA]) CONFIG=A; export _WRF_TIME_STEP=216 ; inicializa_opcoes_wrf ;;
+	      [bB]) CONFIG=B; export _WRF_TIME_STEP=45 ; inicializa_opcoes_wrf ;;
+	      [cC]) CONFIG=C; export _WRF_TIME_STEP=45 ; inicializa_opcoes_wrf ;;
+	      [dD]) CONFIG=D; export _WRF_TIME_STEP=90 ; inicializa_opcoes_wrf ;;
+	      [eE]) CONFIG=E; export _WRF_TIME_STEP=90 ; inicializa_opcoes_wrf ;;
+	      [fF]) CONFIG=F; export _WRF_TIME_STEP=90 ; inicializa_opcoes_wrf ;;
+	      [gG]) CONFIG=G; export _WRF_TIME_STEP=90 ; inicializa_opcoes_wrf ;;
+	      [hH]) CONFIG=H; export _WRF_TIME_STEP=90 ; inicializa_opcoes_wrf ;;
+	      [iI]) CONFIG=I; export _WRF_TIME_STEP=90 ; inicializa_opcoes_wrf ;;
+	      [jJ]) CONFIG=J; export _WRF_TIME_STEP=90 ; inicializa_opcoes_wrf ;;
+	      [kK]) CONFIG=K; export _WRF_TIME_STEP=45 ; inicializa_opcoes_wrf ;;
+	      [lL]) CONFIG=L; export _WRF_TIME_STEP=108 ; inicializa_opcoes_wrf ;;
+	      [xX]) shutdown_execution "Saindo ..." 0 ;;
+	      *) shutdown_execution "Opcao desconhecida. Saindo ..." ;;
       esac
-
-###########################################################
-# Em 03jun2021: agora essa informação será passada como
-#      opção de linha de comando (parametrizada)
-#      resposta=n
-#      echo -e "\nOs dados NCEP estao disponiveis em torno de "
-#      echo '3h30min apos a hora de inicializacao desejada.'
-#	    while [ $resposta = n -o $resposta = N ]
-#	    do	
-#		    echo
-#		    echo ' Escolha da data e hora de inicializacao: '
-#		    read -p " Mes: " MES
-#		    read -p " Dia: " DIA
-#		    read -p " Hora: " HORA
-#		    echo
-#		    echo " DATA HORA da inicializacao: $ANO $MES $DIA ${HORA}Z"
-#		    read -p ' Os dados estao corretos (s/n): ' resposta
-#	    done
-###########################################################
-
-#       echo -e "\nEscolha o numero de niveis:"
-#       echo ' 1 - 23 (padrao de instalacao)'
-#       echo ' 2 - 26 niveis'
-#       echo ' 3 - 31 niveis'
-#       echo ' 4 - 41 niveis'
-#       echo ' x - Sair'
-#       echo -n ' Escolha a opcao: '
-#       read resposta
-#       case $resposta in
-# 	      1) export _MKX=23 ; export MKX=23 ;;
-# 	      2) export _MKX=26 ; export MKX=26 ;;
-# 	      3) export _MKX=31 ; export MKX=31 ;;
-# 	      4) export _MKX=41 ; export MKX=41 ;;
-# 	      x) terminar_script "Saindo ..." ;;
-# 	      *) terminar_script "Opcao desconhecida. Saindo ..." ;;
-#       esac
 
 
       echo -e "\nEscolha de TISTEP "
-      echo " O valor de TISTEP padrao e: $_TISTEP "
+      echo " O valor de TISTEP padrao e: $_WRF_TIME_STEP "
       read -p ' Deseja modifica-lo (s/n): ' resposta
       if [ $resposta = s ]; then
 	      echo -n " Entre com o valor (3*dx): "
 	      read resposta
-	      _TISTEP=$resposta
-	      export _TISTEP
+	      _WRF_TIME_STEP=$resposta
+	      export _WRF_TIME_STEP
       fi
-
-#       echo -e "\nEscolha das opcoes de fisica (None=1,Kuo=2,Grell=3,AS=4,FC=5,KF=6,BM=7,KF2=8)"
-#       echo -n " Entre com o valor para D1 <3>: "
-#       read resposta
-#       if [ $resposta -ge 1 -a $resposta -le 8 ] ; then
-# 	      _CUMULUS_D1=$resposta
-#       else terminar_script "Resposta fora das opcoes disponiveis."
-#       fi
-#       export _CUMULUS_D1
-# 
-#       if [ $CONFIG = 0 -o $CONFIG = 1 -o $CONFIG = 2 -o $CONFIG = 3 -o $CONFIG = 4 -o $CONFIG = 5 -o $CONFIG = 6 -o $CONFIG = 7 -o $CONFIG = 8 -o $CONFIG = 9 ] ; then
-# 	      echo -n " Entre com o valor para D2 <3>: "
-# 	      read resposta
-# 	      if test $resposta -ge 1 -a $resposta -le 8 ; then
-# 		      _CUMULUS_D2=$resposta
-# 	      else terminar_script "Resposta fora das opcoes disponiveis."
-# 	      fi
-# 	      export _CUMULUS_D2
-#       fi
-# 
-#       if [ $CONFIG = 0 ]; then
-# 	      echo -n " Entre com o valor para D3 <1>: "
-# 	      read resposta
-# 	      if test $resposta -ge 1 -a $resposta -le 8 ; then
-# 		      _CUMULUS_D3=$resposta
-# 	      else terminar_script "Resposta fora das opcoes disponiveis."
-# 	      fi
-# 	      export _CUMULUS_D3
-#       fi
-# 
-#       echo -e "\nEscolha das opcoes de PBL (planetary boundary layer)."
-#       echo -e "0=no PBL fluxes, 1=bulk, 2=Blackadar, 3=Burk-Thompson,"
-#       echo -e "4=Eta M-Y, 5=MRF, 6=Gayno-Seaman, 7=Pleim-Xiu"
-#       echo -n "  Entre com o valor: "
-#       read resposta
-#       if [ $resposta -ge 1 -a $resposta -le 7 ] ; then
-# 	      _PBL_D1=$resposta ; _PBL_D2=$resposta ; _PBL_D3=$resposta
-#       else terminar_script "Resposta fora das opcoes disponiveis."
-#       fi
-#       export _PBL_D1 ; export _PBL_D2 ; export _PBL_D3 ;
-# 
 
 ###########################################################
 # Em 03jun2021: agora essa informação será passada como
 #      opção de linha de comando (parametrizada)
-#      echo 
-#      echo 'Escolha o periodo da integracao:'
-#      echo ' 1 - 24 horas'
-#      echo ' 2 - 48 horas'
-#      echo ' 3 - 72 horas'
-#      echo ' x - Sair'
-#      echo -n ' Escolha o periodo: '
-#      read resposta
-#      case $resposta in
-#	      1) TEMPO_INTEGRACAO=24; export _TIMAX=1440 ;;
-#	      2) TEMPO_INTEGRACAO=48; export _TIMAX=2880 ;;
-#	      3) TEMPO_INTEGRACAO=72; export _TIMAX=4320 ;;
-#	      x) terminar_script "Saindo ..." ;;
-#	      *) terminar_script "Opcao desconhecida. Saindo ..." ;;
-#      esac
+#	      1) RUN_TIME_HOURS=24; export _TIMAX=1440 ;;
+#	      2) RUN_TIME_HOURS=48; export _TIMAX=2880 ;;
+#	      3) RUN_TIME_HOURS=72; export _TIMAX=4320 ;;
 ###########################################################
 
 ###########################################################
 # Em 03jun2021: agora essa informação será ajustada no início
 #      e também na função opcoes_rodada
-#      echo "  "
-#      echo 'Escolha do compilador:'
-#      echo ' 1 - PGI'
-#      echo ' 2 - Intel'
-#      echo ' 3 - GNU GFortran'
-#      echo ' x - Sair'
-#      echo -n ' Qual compilador: '
-#      read resposta
-#      case $resposta in
 #	      1) COMPILADOR=PGI ;;
 #	      2) COMPILADOR=INTEL ;;
 #	      3) COMPILADOR=GFORTRAN ;;
-#	      x) terminar_script "Saindo ..." ;;
-#	      *) terminar_script "Opcao desconhecida. Saindo ..." ;;
-#      esac
 ###########################################################
 
 } # termino funcao inicializacao
 
 opcoes_rodada () {
-      CONFIG=a; export _TISTEP=216 ; inicializa_opcoes_wrf
+      CONFIG=a; export _WRF_TIME_STEP=216 ; inicializa_opcoes_wrf
       export _MKX=31 ; export MKX=31
       # Grell=3
       export _CUMULUS_D1=3 ; export _CUMULUS_D2=3 ; export _CUMULUS_D3=3
       # 5=MRF
       export _PBL_D1=5 ; export _PBL_D2=5 ; export _PBL_D3=5
-      TEMPO_INTEGRACAO=24; export _TIMAX=1440
+      RUN_TIME_HOURS=24; export _TIMAX=1440
 	  FORMATO_DADOS=GRIB2
 	  COMPILADOR=GFORTRAN
 }
 
-################################################################################
-################################################################################
-#
-#                                INICIO DO PROCESSAMENTO
-#
-################################################################################
-################################################################################
 
 
+# #############################################################
+#  The next 2 functions are used to found the NEXT CONFIGURATION
+# #############################################################
 
-
-
-################################################################################
-#                   INICIO DO PROCESSAMENTO
-################################################################################
-
-# EM 03jun2021: até o momento, são três, mas cfe evolui o 
-#      script, esse valor mudará
-NUM_ARGUMENTOS=3 # ts   ti   r    (OBRIGATÓRIOS)
-# ./runwrf.sh -ts 2021-06-10-00 -ti 24 -r 1p00
-# O shell interpreta cada elemento como um argumento,
-#    logo, número total são seis $#=6 ($0 é o comando)
-
-echo "\$\# = $#"  
-
-let result=$(($NUM_ARGUMENTOS * 2))
-
-# Verifica número de argumentos: deve ser maior que o mínimo obrigatorio
-if [ $# -lt $result ]; then
-     ajuda
-fi
-
-# ===============================================================
-#  Funcao para extracao de PARAMETROS da linha de comando 
-# ===============================================================
-while [ "$1" != "" ]; do
-    case $1 in
-        -i | --ifrest )         shift
-                                parametro=$1
-				                ifrest $parametro
-                                ;;
-#        --clm )                 sfc_model clm
-#                                ;;
-#        --clm45 )               sfc_model clm45
-#                                ;;
-        -ts | --t_start )    	shift
-                                parametro=$1
-                				t_start $parametro
-                                ;;
-#        -gt2 | --gdate2 )    	shift
-#                                parametro=$1
-#				                gdate2 $parametro				
-#                                ;;
-#        -mdt1 | --mdate1 )    	shift
-#                                parametro=$1
-#				                mdate1 $parametro				
-#                                ;;
-#        -mdt2 | --mdate2 )    	shift
-#                                parametro=$1
-#				                mdate2 $parametro				
-#                                ;;
-#        -tr | --durtemprodada ) shift
-#                                export DURACAO_RODADA=$1			
-#                                ;;
-        -ti |  --t_integracao ) shift
-                                parametro=$1                                   
-                                t_integracao $parametro
-                                ;;
-        -r | --res_g_ncep )   	shift
-                                parametro=$1
-				                res_g_ncep $parametro			
-                                ;;
-        -np | --numproces )   	shift
-                                export NUM_PROC=$1
-                                ;;
-        --use-hwthread-cpus )   OPCAO_1=$(echo "--use-hwthread-cpus")
-                                ;;                           
-        -h | --help )           ajuda
-                                terminar_script " " 0
-                                ;;
-        * )                     ajuda
-                                terminar_script " ERRO: faltam parametros. Saindo ...  " 1
-    esac
-    
-    # Opção $1 já processada. O próximo argumento $2 será o $1.
-    shift
-done
-
-#  Inicia variáveis de diretório principais
-# inicia_var_dir
-
-
-# Teste para verificar se todos os parametros foram passados
-#     CORRETAMENTE
-if [ $NUM_PARAM -ne 3 ]; then
-    mensagem "  ERRO: falta(m) parametro(s)."
-    ajuda
-#	terminar_script "  ERRO: falta(m) parametro(s). Saindo ..." 1
-fi
-
-
-
-
-
-# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-#      AJUSTE DAS VARIAVEIS DO MODELO WRF
-# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-# Em 28mar13: ajuste da variável DIR_CORRENTE. Se a inicializacao for manual ou
-#             interativa, a variável será ajustada pelo `pwd` durante o processamento.
-DIR_CORRENTE=/home/cirrus/modelo
-
-if [ -z $1 ]; then
-      HOUR=12
-elif [ $1 = 12 ]; then HOUR=12
-elif [ $1 = 00 ]; then HOUR=00
-fi
-
-if [ $DH_INICIALIZACAO = "AUTOMATICO" ]; then
-      YEAR=`date +%Y` ; MONTH=`date +%m` ; DAY=`date +%d`
-      ANO=$YEAR ; MES=$MONTH ; DIA=$DAY ; HORA=$HOUR
-      opcoes_rodada
-fi
-
-if [ $DH_INICIALIZACAO = "MANUAL" ]; then
-      ANO=2021; MES=10 ; DIA=25 ; HORA=12
-      opcoes_rodada
-fi
-
-if [ $DH_INICIALIZACAO = "INTERATIVA" ]; then
-#      ANO=2021 ; HORA=12
-      inicializacao_interativa
-fi
-
-# Em 15ago10: Ajuste dos parâmetros de ISOIL e IMVDIF conforme escolha de PBL.
-if [ $_PBL_D1 -eq 0 ] || [ $_PBL_D1 -eq 1 ] || [ $_PBL_D1 -eq 3 ]; then
-  _IMVDIF=0 ; _ISOIL=0
-fi
-if [ $_PBL_D1 -eq 2 ] || [ $_PBL_D1 -eq 5 ] ; then
-  _IMVDIF=1 ; _ISOIL=1
-fi
-if [ $_PBL_D1 -eq 4 ] || [ $_PBL_D1 -eq 6 ]; then
-   _IMVDIF=0 ; _ISOIL=1
-fi
-if [ $_PBL_D1 -eq 7 ]; then
-   _IMVDIF=1 ; _ISOIL=3
-fi
-export _IMVDIF ; export _ISOIL
-
-
-
-INCR=6
-ANO_SST=2006
-MES_SST=04
-DIA_SST=17
-DATA_SST=$ANO_SST$MES_SST$DIA_SST
-
-# Definições da data de inicialização e da data do último período de previsão
-export HORA_INICIAL=$HORA
-export DATA=$ANO$MES$DIA
-export INICIO_ANO=$ANO 
-export INICIO_MES=$MES
-export INICIO_DIA=$DIA 
-export INICIO_HORA=$HORA_INICIAL
-export FIM_ANO=$ANO
-# Caso estejamos no dia 31 de dezembro, o mesmo será pulado, cfe código a seguir.
-export FIM_MES=$MES
-# Caso seja final de mês, o código adiante ajustará corretamente o novo mês.
-#export FIM_DIA=07
-#export FIM_HORA=12
-export INTERVALO=21600
-# INTERVALO (s) 21600s=6h
-
-if [ $TEMPO_INTEGRACAO = 24 ]
-then
-	RESULTADO=`expr $DIA + 1`
-	export FIM_DIA=`printf %02d $RESULTADO`
-	export FIM_HORA=$HORA_INICIAL
-elif [ $TEMPO_INTEGRACAO = 36 ]
-then
-	RESULTADO=`expr $HORA_INICIAL + 12`
-	export FIM_HORA=`printf %02d $RESULTADO`
-if test $FIM_HORA -ge 24 ; then 
-	RESULTADO=`expr $DIA + 2`
-	export FIM_DIA=`printf %02d $RESULTADO`
-	RESULTADO=`expr $FIM_HORA - 24`
-	export FIM_HORA=`printf %02d $RESULTADO`
-else 
-	RESULTADO=`expr $DIA + 1`
-	export FIM_DIA=`printf %02d $RESULTADO`
-fi
-elif [ $TEMPO_INTEGRACAO = 48 ]
-then
-	RESULTADO=`expr $DIA + 2`
-	export FIM_DIA=`printf %02d $RESULTADO`
-	export FIM_HORA=$HORA_INICIAL
-
-elif [ $TEMPO_INTEGRACAO = 72 ]
-then
-	RESULTADO=`expr $DIA + 3`
-	export FIM_DIA=`printf %02d $RESULTADO`
-	export FIM_HORA=$HORA_INICIAL
-fi
-
-
-
-# 
-# Em 05ago05: - caso seja final de mês, o código a seguir calculará a nova data.
-#             - os valores de FIM_DIA acima calculados não levam em consideração a passagem
-#               de mês.  
-# Mês de fevereiro (considerando como de 28 dias)
-if [ $MES = 02 ]; then
-if [ $FIM_DIA -ge 29 ]; then
-		RESULTADO=`expr $MES + 1`
-		FIM_MES=`printf %02d $RESULTADO`
-		RESULTADO=`expr $FIM_DIA - 28`
-		FIM_DIA=`printf %02d $RESULTADO`
-fi
-fi 
-# Meses de 30 dias
-if [ $MES = 04 -o $MES = 06 -o $MES = 09 -o $MES = 11 ]; then 
-if [ $FIM_DIA -ge 31 ]; then
-		RESULTADO=`expr $MES + 1`
-		FIM_MES=`printf %02d $RESULTADO`
-		RESULTADO=`expr $FIM_DIA - 30`
-		FIM_DIA=`printf %02d $RESULTADO`
-fi
-fi
-
-# Meses de 31 dias exceto dezembro.
-if [ $MES = 01 -o $MES = 03 -o $MES = 05 -o $MES = 07 -o $MES = 08 -o $MES = 10 ]; then
-if [ $FIM_DIA -ge 32 ]; then
-		RESULTADO=`expr $MES + 1`
-		FIM_MES=`printf %02d $RESULTADO`
-		RESULTADO=`expr $FIM_DIA - 31`
-		FIM_DIA=`printf %02d $RESULTADO`
-fi
-fi
-
-# Mês de dezembro.
-if [ $MES = 12 ]; then 
-if [ $FIM_DIA -ge 32 ]; then
-	FIM_ANO=`expr $ANO + 1`
-	FIM_MES=01
-	RESULTADO=`expr $FIM_DIA - 31`
-	FIM_DIA=`printf %02d $RESULTADO`
-fi
-fi
-
-echo " " >> wrf.log
-echo "INICIAL: $INICIO_ANO$INICIO_MES$INICIO_DIA-$INICIO_HORA" >> wrf.log
-echo "FINAL: $FIM_ANO$FIM_MES$FIM_DIA-$FIM_HORA" >> wrf.log
-let INTERVALO_HORAS=$INTERVALO/3600
-echo "INTERVALO: $INTERVALO(s)  - $INTERVALO_HORAS(h)" >> wrf.log
-
-
-
-# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-#      VARIAVEIS DO PERIODO DE INTEGRACAO
-# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-
-
-# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-#         VARIAVEIS DE DIRETORIOS
-# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-# Em 27abril05: modificação dos diretórios. (Cap Gerson)
-# Em 31out05: modificação do diretório GFS (do sítio NCEP).
-
-# Diretório PRINCIPAL => diretório do USUÁRIO
-export USER_PATH=$HOME
-# Diretório dos arquivos executáveis (pgi, gradsc, mm5)
-export BIN_PATH=$USER_PATH/bin
-# Diretório de instalação do Pgi
-# export PGI_PATH=$BIN_PATH/pgi
-# Diretório dos binários
-BINARIOS_PATH=$USER_PATH/binarios
-# Diretório de TRABALHO
-export WORK_PATH=$USER_PATH/bin/WRF
-
-# Em 03jul10: diretórios de trabalho para o WRF.
-WRF_PATH=$USER_PATH/bin/WRF
-# Em 06jul10: será exportada para ser usada pelos scripts do WPS.
-export WPS_PATH=$USER_PATH/bin/WPS
-
-# Diretório dos arquivos de terreno. O nome do diretório é aquele da descompactação.
-export GEODATA_PATH=$USER_PATH/bin/WPS_GEOG
-
-# Diretório backup dos arquivos de dados da rodada corrente.
-#    Em 06jul10: será exportado em função do wps.
-export DIR_DADOS_GFS=$USER_PATH/gfs-data-$DATA$HORA_INICIAL'Z'
-
-# Diretório a será criado para backup dos resultados da rodada da grade corrente.
-#   Sera configurado para o diretorio correto a seguir.
-DIR_SAIDA_WRF=$DIR_DADOS_GFS/
-
-# TODO TODO TODO TODO
-# Em 07jun2011: Arquivo com o log das rodadas
-RODADAS_LOG=$DIR_DADOS_GFS/rodadas-WRF-$DATA$HORA_INICIAL'.log'
-
-# Em 24mai08: modificacao da variavel abaixo, pois no crontab ela nao era ajustada
-#             de forma correta (algum problema com o retorno do pwd). Somente no run3.sh.
-# DIR_CORRENTE=/home/mm5/modelo
-# Em 01mai11: variável será exportada, pois será usada por um outro scritp (compilar-mm5.sh)
-# Em 28mar13: a variavel DIR_CORRENTE será ajustada no início e deve conter, geralmente, o diretório
-#             onde se encontra o script do modelo.
-if [ $DH_INICIALIZACAO = "AUTOMATICO" ]; then
-	export DIR_CORRENTE
-else
-	export DIR_CORRENTE=$(pwd)
-fi
-
-
-# Definição da busca dos dados 
-# FTP_DIR=/pub/data/nccf/com/gfs/prod/gfs.$DATA/
-# Em 31out05: a partir de 13out e 08nov05, exclusivamente,
-#             os dados gfs deverão ser acessados através do
-#             seguinte diretório:
-FTP_DIR=/pub/data/nccf/com/gfs/prod/gfs.$DATA/$HORA_INICIAL/
-FTP_DIR_SST=/pub/data/nccf/com/gfs/prod/sst.$DATA_SST/
-FTP_SITE=ftpprd.ncep.noaa.gov
-#FTP_SITE=140.90.33.31
-# export ARQUIVO_SST=sst2dvar_grb_0.5
-
-
-#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-#	     CRIACAO DO DIRETORIO DOS DADOS 
-#      		E BUSCA DOS DADOS GLOBAIS   
-#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-# Definição da função que cria o arquivo para ser usado pelo ftp.
-function criar_ftpgfs  {
-	echo "user anonymous user@icea.gov.br"             > ftpgfs
-	echo "bin"                                          >> ftpgfs
-	echo "hash"                                         >> ftpgfs
-	echo "cd "$FTP_DIR                                  >> ftpgfs
-}
-
-
-# Cria o diretório de backup dos dados GFS (buscados do NCEP)
-if [ ! -d $DIR_DADOS_GFS ]; then
-	mkdir -p $DIR_DADOS_GFS
-fi
-
-cd $DIR_DADOS_GFS
-
-#    BUSCA DOS DADOS GLOBAIS PARA INICIALIZAÇÃO E FRONTEIRA
-#-------------------------------------------------------------------
-echo
-echo "Obtendo dados GFS (GRIB2) de $FTP_SITE."
-echo "  Diretorio: $FTP_DIR"
-echo "  Data hora: $DATA $HORA"
-echo
-
-#-------------------------------------------------------------------
-#    Download dos dados GFS do site ftpprd.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.20050101
-# gfs.t18z.pgrbanl
-#-------------------------------------------------------------------
-
-# Em 03jun12: foi acrescido um teste antes do incremento.
-
-# Em 25out2020: ftp://ftpprd.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.20201025/12/gfs.t12z.pgrb2.0p25.f072
-#               337123 KB 
-
-
-if [ $DIR_DADOS_GFS != `pwd` ]; then 
-  echo " Estamos no diretório errado. Saindo ... ";
-  exit 1;
-fi
-
-
-# https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.t"$HORA_INICIAL"z.pgrb2.1p00.f$HORA_PREVISAO
-# ftp://ftpprd.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.20201025/12/gfs.t12z.pgrb2.1p00.f000
-
-# https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.t12z.pgrb2.1p00.f000
-# https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.20210308/12/gfs.t12z.pgrb2.1p00.f000
-
-
-if [ $DIR_DADOS_GFS != `pwd` ]; then 
-  echo " Estamos no diretório errado. Saindo ... ";
-  exit 1;
-fi
-
-if [ $FORMATO_DADOS = "GRIB2" ]; then
-	COPIADOS=1
-	while [ $COPIADOS -eq 1 ]
-	do 
-		HORA_PREVISAO_NUM=0
-		while [ "$HORA_PREVISAO_NUM" -le "$TEMPO_INTEGRACAO" ]
-		do
-# printf %03d 012 : o 012 é interpretado como OCTAL		
-			HORA_PREVISAO=`printf %03d "$HORA_PREVISAO_NUM"`
-			if [ -e "$DIR_DADOS_GFS/gfs.t"$HORA_INICIAL"z.pgrb2."$RES_G_NCEP".f$HORA_PREVISAO" ]; then
-				if [ `du -ks "$DIR_DADOS_GFS/gfs.t"$HORA_INICIAL"z.pgrb2."$RES_G_NCEP".f$HORA_PREVISAO" | cut -f1` -gt 25000 ]; then
-					echo "Arquivo $DIR_DADOS_GFS/gfs.t"$HORA_INICIAL"z.pgrb2."$RES_G_NCEP".f$HORA_PREVISAO copiado."
-					COPIADOS=0
-				fi
-			else
-				echo
-				COPIADOS=1
-				echo "Arquivo $DIR_DADOS_GFS/gfs.t"$HORA_INICIAL"z.pgrb2."$RES_G_NCEP".f$HORA_PREVISAO NÂO COPIADO."
-				# wget -c --passive-ftp ftp://$FTP_SITE$FTP_DIR/gfs.t"$HORA_INICIAL"z.pgrb2."RES_G_NCEP".f$HORA_PREVISAO
-				wget -c https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.$DATA/$HORA_INICIAL/atmos/gfs.t"$HORA_INICIAL"z.pgrb2."$RES_G_NCEP".f$HORA_PREVISAO
-			fi
-			# Incrementa somente se tiver sido copiado.
-			if [ $COPIADOS -eq 0 ] ; then 
-			    echo "Incremento: $INCR"
-			  HORA_PREVISAO_NUM=`expr $HORA_PREVISAO_NUM \+ $INCR`
-			fi
-		done
-	done
-fi
-
-
-# Em 17jun2021: verifica a última configuração executada: DIR_DADOS_GFS/wrf-CONFIG-CONTADOR
+# -------------------------------------------------------------
+#  Function: verifica a última configuração executada: DIR_DADOS_GFS/wrf-CONTADOR
 #         Permite que, para uma mesma data, possam ser executados diferentes domínios e 
 #         diferentes configurações (física, pex).
-ultima_configuracao ()
+# Em 02jan22: the configuration of output changed
+#   DIR_DOMAIN_OUTPUT=yyyy-mm-dd-HH_dom_[A-Z]-["short name of config domain"]
+#   DIR_WRF_OUTPUT=${DIR_DATA_OUTPUT}/${DIR_DOMAIN_OUTPUT}/wrf-[a-z]
+# -------------------------------------------------------------
+f_last_completed_configuration ()
 {
-#ls | grep ^wrf | tr -s 'wrf' ' ' | tr -s '-' ' ' |cut -d' ' -f2
-#ls | grep ^wrf | tr -s 'wrf' ' ' | tr -s '-' ' ' |cut -d' ' -f3
-    echo -e "--- CONFIGURAÇÃO da PRÓXIMA RODADA (início) ---\n"
-    cd $DIR_DADOS_GFS
-    LISTA=$(ls -d wrf-$CONFIG-*)
-    status=$?
-    if [ $status -ne 0 ]; then
-        VALOR_ULTIMA_CONF=0
-        cd -  # volta para diretório anterior
-        return $VALOR_ULTIMA_CONF
+    # cd ${DIR_DATA_OUTPUT}${DIR_DOMAIN_OUTPUT}
+    [ -d ${DIR_DATA_OUTPUT}/${1} ] && cd ${DIR_DATA_OUTPUT}/${1}
+    
+    LISTA=$(ls -d wrf-[a-z] 2>/dev/null)
+    # If it is empty (no execution yet)
+    if [ $? -ne 0 ]; then
+        VAL_LAST_LETTER_CONF=a        
+    # There were some (one or more executions)    
     else
-#        LISTA=$(echo $LISTA | sort)
+        LISTA=$(echo $LISTA | sort)
         for i in $LISTA; do
-            VALOR=$(echo $i | cut -d'-' -f 3)
-            if test ${VALOR} -ge 0  -a ${VALOR} -le 9; then
-                echo "Valor dec = $VALOR"
-                VALOR_ULTIMA_CONF=$VALOR
+            VALOR=$(echo $i | cut -d'-' -f 2)
+            # =~ : test ( or [[ ]]) command uses regex to make comparisons
+            if [[ $VALOR =~ [[:lower:]] ]]; then
+                echo "Valor = $VALOR"
+                VAL_LAST_LETTER_CONF=$VALOR
             fi
         done
         cd -  # volta para diretório anterior
-        echo "Valor ultima configuracao: wrf-$CONFIG-$VALOR"
-        return $VALOR_ULTIMA_CONF
+        # DEBUG
+        f_debug $0 Value of Last Letter Executed $VAL_LAST_LETTER_CONF
+        #echo "Valor ultima configuracao: wrf-${VAL_LAST_LETTER_CONF}"
     fi
 }
 
-proxima_rodada ()
+
+# -------------------------------------------------------------
+#  Function: set the output DIR VAR: DIR_WRF_OUTPUT
+# -------------------------------------------------------------
+# Em 02jan22: this function will set the next run config for THE SAME DOMAIN CONFIG
+#             The aim is to have different directories for different physical
+#             configurations for the same domain/initial date-hour configuration.
+#   DIR_DOMAIN_OUTPUT=yyyy-mm-dd-HH_dom_[A-Z]-["short name of config domain"]
+#   DIR_WRF_OUTPUT=${DIR_DATA_OUTPUT}/${DIR_DOMAIN_OUTPUT}/wrf-[a-z]
+f_find_next_execution_round  ()
 {
         # Diretorio com os dados de saida do modelo (grade) corrente.
-        ultima_configuracao
-        retorno=$?
-        echo "Retorno ultima configuracao = $retorno"
-        DIR_SAIDA_WRF=$DIR_DADOS_GFS/wrf-$CONFIG-$retorno
-        echo "Ultima configuracao executada: DIR_SAIDA_WRF = $DIR_SAIDA_WRF"
-#        echo "DIR_SAIDA_WRF = $DIR_SAIDA_WRF"
-        if [ -d $DIR_SAIDA_WRF ]; then
-	        status=$(cat $DIR_SAIDA_WRF/status-current-configuration.log)
+        #ultima_configuracao
+        f_last_completed_configuration $1
+        
+        # Em 02jan22: dir changed
+        #  DIR_WRF_OUTPUT=DIR_DATA_OUTPUT/DIR_DOMAIN_OUTPUT/wrf-[a-z]
+        #  DIR_WRF_OUTPUT=model-data-output/2021-12-31-12_dom_A-regiao-sul/wrf-[a-z]
+        DIR_WRF_OUTPUT=${DIR_DATA_OUTPUT}/${DIR_DOMAIN_OUTPUT}/wrf-${VAL_LAST_LETTER_CONF}
+        
+        # echo "Ultima configuracao executada: DIR_WRF_OUTPUT=${DIR_WRF_OUTPUT}"
+
+        # Now, we will test if it contains the log file and if the execution
+        #      finished with success.
+        if [ -d ${DIR_WRF_OUTPUT} ]; then
+            status=$(cat $DIR_WRF_OUTPUT/status-current-configuration.log)
         else 
-	        status=2
-	    fi 
+            status=2
+        fi 
 
         # Valores para status:
         # 0 = diretório já existe e a rodada foi completada
         # 1 = diretório já existe e a rodada não foi completada com sucesso
         # 2 = diretório não existe ainda
 
-        echo "status = $status"
-        if [ $status -eq 0 ] || [ $status -eq 2 ] ; then
+        # echo "status = $status"
+        
+        # Obtain the next letter for the next round
+        # If $USE_STATIC_NAMELIST_FILES == "yes" we also need new output dir.
+        if [ $status -eq 0 ] || [ x$2 == x"yes" ] ; then
             echo "Configuração anterior executada com SUCESSO"
-		    VALOR=`expr $retorno \+ 1`
-		    DIR_SAIDA_WRF=$DIR_DADOS_GFS/wrf-$CONFIG-$VALOR
-		    echo "Próxima configuração: DIR_SAIDA_WRF = $DIR_SAIDA_WRF"
-		fi
-        if [ $status -eq 1 ] ; then
-            echo "Configuração anterior com ERRO."
-            echo "Executar com mesmas configurações."
+            ASCII_ORD=$(echo ${VAL_LAST_LETTER_CONF} | tr -d "\n" | od -An -t uC)
+            ASCII_ORD=$(( $ASCII_ORD + 1 ))
+            NEXT_LETTER=$( printf "\U$(printf %08x $ASCII_ORD)" )
+            DIR_WRF_OUTPUT=${DIR_DATA_OUTPUT}/${DIR_DOMAIN_OUTPUT}/wrf-${NEXT_LETTER}
+            
+            mensagem "Next round: DIR_WRF_OUTPUT=${DIR_WRF_OUTPUT}"
+            return 0
         fi
-
-    echo -e "--- CONFIGURAÇÃO da PRÓXIMA RODADA (término) ---\n"	
-    cd -
+        
+        # Or, the same round will be re-executed, with the same configuration
+        if [ $status -eq 1 ]; then
+            mensagem "Configuração anterior com ERRO. Executar com mesmas configurações."
+            return 1
+        fi
+        
+       if [ $status -eq 2 ]; then
+            mensagem "Next round: DIR_WRF_OUTPUT=${DIR_WRF_OUTPUT}"
+            return 0
+        fi
 }
 
 
-        
+
+
+
+
+################################################################################
+################################################################################
+#
+#          START of PROCESSING
+#
+################################################################################
+################################################################################
+
+
+## DEBUG
+f_debug $0 "About OS" "$(uname -a)"
+
+
+
+#  
+# MANDATORY parameters: conf ts ti gd gtr  (NUM_ARGUMENTOS=5)
+#   ./runwrf.sh -conf A -ts 2021-06-10-00 -ti 24 -gd gfs0p25 -gtr 6
+#   gd: gfs1p00 | gfs0p50 | gfs0p25 | cptec_wrf_5km
+#   gtr: 3 or 6 hours
+
+# O shell interpreta cada elemento como um argumento,
+#    logo, número total são seis $#=6 ($0 é o comando)
+
+## DEBUG
+f_debug $0 "Number of parameters" $#
+
+let result=$(($NUM_ARGUMENTOS * 2))
+
+# Verifica número de argumentos: deve ser maior que o mínimo obrigatorio
+if [ $# -lt $result ]; then
+     help
+fi
+
+# Before process user parameters, we need check something
+# TODO TODO NCDUMP
+
+
+
+
+# ===============================================================
+#  Funcao para extracao de PARAMETROS da linha de comando 
+# ===============================================================
+while [ "$1" != "" ]; do
+    case $1 in
+        -conf )                 shift
+                                [[ ! -z $1 ]] && param=$1 || ajuda
+                                [[ "${1}" =~ ^(z|Z)$ ]] && help_for_config_domain
+                                f_set_domain_and_phys_parameters $param
+                                [[ $? -ne 0 ]] && ajuda
+                                ;;
+        -ts | --t_start )       shift
+                                [ ! -z $1 ] && param=$1 || ajuda
+                                t_start $param
+                                [[ $? -ne 0 ]] && ajuda
+                                ;;
+        -ti |  --t_int )        shift
+                                [ ! -z $1 ] && param=$1 || ajuda                                
+                                t_integracao $param
+                                [[ $? -ne 0 ]] && ajuda
+                                ;;
+        -tiout                ) shift
+                                [[ $1 -eq 3 ]] || [[ $1 -eq 6 ]] && export _T_INTERVAL_OUTPUT_1=$(( $1 \* 60 ))
+                                [[ $? -ne 0 ]] && ajuda
+                                ;;                                
+                                
+        -gd | --global_data )  shift
+                                [ ! -z $1 ] && param=$1 || ajuda
+                                f_global_data $param
+                                [[ $? -ne 0 ]] && ajuda
+                                ;;
+        -gti | --global_dt_int ) shift
+                                [[ $1 -eq 1 ]] || [[ $1 -eq 3 ]] || [[ $1 -eq 6 ]] && GLOBAL_DATE_TIME_INTERVAL=$1
+                                [[ $? -ne 0 ]] && mensagem "ERROR in the parameter gtr:${1} " && ajuda
+                                NUM_PARAM=$(( $NUM_PARAM + 1))
+                                ;;
+        -np | --numproces )     shift
+                                [ ! -z $1 ] && export NUM_PROC=$1 || ajuda
+                                ;;
+        --wrf-time-step )       shift
+                                [ ! -z $1 ] && WRF_TIME_STEP=$1 || ajuda  # the main var need be adjusted before the execution
+                                ;;
+        --use-hwthread-cpus )   WRF_PARAM_FOR_MPI_1=$(echo "--use-hwthread-cpus")
+                                ;;
+        --use-generated-geogrid ) USE_GENERATED_GEOGRID=$(echo "yes")
+                                ;;
+        --use-static-config )   USE_STATIC_NAMELIST_FILES=$(echo "yes")
+                                ;;
+        -h | --help )           help
+                                shutdown_execution " " 0
+                                ;;
+        * )                     help
+                                shutdown_execution " ERROR: missing mandatory parameters. Leaving ...  " 1
+    esac
+    
+    # Opção $1 já processada. O próximo argumento $2 será o $1.
+    shift
+done
+
+# Teste para verificar se todos os parametros foram passados
+#     CORRETAMENTE
+if [ ${NUM_PARAM} -ne ${NUM_ARGUMENTOS} ]; then
+    mensagem "ERROR: missing some mandatory parameters."
+    help
+fi
+
+
+###########################################################
+###########################################################
+#
+#               Main CONFIGURATION setting
+#  - Directories: now we have all the information (CONFIG + DATE-TIME)
+#  - Parameters for the model (namelist): WPS and WRF
+#
+###########################################################
+###########################################################
+
+
+# Calculate the final DATE-TIME of the integration (date-time of the last forecast time)
+#   Do not declare int (-i), because month 2 need to appear as 02
+declare END_YEAR END_MONTH END_DAY END_HOUR 
+
+t_calcular_data_hora_final ${START_YEAR} ${START_MONTH} ${START_DAY} ${START_HOUR}
+
+## DEBUG
+f_debug $0 START_DATE_TIME ${START_YEAR}-${START_MONTH}-${START_DAY}-${START_HOUR}
+f_debug $0 END_DATE_TIME ${END_YEAR}-${END_MONTH}-${END_DAY}-${END_HOUR}
+
+# ========================================================
+#	     Set and/or create DIRECTORIES for:
+#    - Where are the binaries
+#    - Where are the terrain data
+#    - Where to put MET data (meteorological data for ungrib)
+#    - Where to put the results (WRFout and images from GrADS
+#      	 And, fethc global met data
+# ========================================================
+
+# This function will set DIR variables and set/create WPS/WRF
+#    DIR variables (DIR_DATA_INPUT/DIR_DATA_OUTPUT)
+f_set_or_create_dir
+
+# Em 02jan22: set DIRs
+#     DIR_DATA_OUTPUT/DIR_DOMAIN_OUTPUT/
+#     model-data-output/2021-12-31-12_dom_A-SC/wrf-1
+
+# Em 03jan22: setting of input and output directories
+#   DIR_WPS_INPUT=DIR_DATA_INPUT/yyyy-mm-dd-HH-[gfs|cptec-wrf]
+
+#   DIR_DOMAIN_OUTPUT=yyyy-mm-dd-HH_dom_[A-Z]-["short name of config domain"]
+#   DIR_WRF_OUTPUT=${DIR_DATA_OUTPUT}/${DIR_DOMAIN_OUTPUT}/wrf-[a-z]
+
+
+# The var GLOBAL_DATA_SOURCE is setted globally as GFS.
+    
+    
+DIR_WPS_INPUT=${DIR_DATA_INPUT}/${START_YEAR}-${START_MONTH}-${START_DAY}-${START_HOUR}-$(echo ${GLOBAL_DATA_SOURCE} | tr [A-Z] [a-z])
+# Test and/or create the dir
+if [ ! -d ${DIR_WPS_INPUT} ]; then
+    mkdir -p ${DIR_WPS_INPUT}
+    [ $? -ne 0 ] && shutdown_execution "ERROR: problem in creating dir ${DIR_WPS_INPUT}" 1
+fi
+
+## DEBUG
+f_debug $0 DIR_WPS_INPUT ${DIR_WPS_INPUT}
+
+
+# TODO TODO
+# Em 07jun2011: Arquivo com o log das rodadas
+RODADAS_LOG=${DIR_WPS_INPUT}/rodadas-WRF-${START_YEAR}${START_MONTH}${START_DAY}${START_HOUR}.log
+
+# 20220208
+# DIR_DOMAIN_OUTPUT=${START_YEAR}-${START_MONTH}-${START_DAY}-${START_HOUR}-domain-$(echo ${CONFIG} | tr [A-Z] [a-z])-${CONFIG_NAME}    
+DIR_DOMAIN_OUTPUT=${START_YEAR}-${START_MONTH}-${START_DAY}-${START_HOUR}_dom_${CONFIG_NAME}
+
+# TODO está sendo criado em CURRENT_DIR
+
+
+mensagem ">>>>>>> Configuration of the next round for the same CONFIG value   (STARTING)"
+
+# Em 30jan22: find the next round for the same configuration.
+#             The aim is to have different directories for different physical
+#             configurations for the same domain/initial date-hour configuration.
+# DIR_WRF_OUTPUT=${DIR_DATA_OUTPUT}/${DIR_DOMAIN_OUTPUT}/wrf-$VAL_LAST_LETTER_CONF
+
+declare -l VAL_LAST_LETTER_CONF="a"   # Declare the var as lowercase
+
+#STATUS=$(f_find_next_execution_round ${DIR_DOMAIN_OUTPUT})
+f_find_next_execution_round ${DIR_DOMAIN_OUTPUT} $USE_STATIC_NAMELIST_FILES
+if [[ $? -eq 0 ]]; then
+    mensagem " WRF Model Output DIR: ${DIR_WRF_OUTPUT} "
+else
+    mensagem " WRF Model Output DIR (the last will be re-executed): ${DIR_WRF_OUTPUT} "
+fi
+
+unset VAL_LAST_LETTER_CONF
+
+mensagem "<<<<<<< Configuration of the next round for the same CONFIG value   (ENDING)"
+
+
+# Em 02jan22: set wrf namelist options (physics, domain, etc)
+# f_set_domain_var
+
+
+# 20220207: if user will test some value of TIME STEP different from the default for
+#           the configuration, then it need be adjusted here, before execution
+if [[ $WRF_TIME_STEP -gt 5 ]] && [[ $WRF_TIME_STEP -lt 300 ]]; then
+    export _WRF_TIME_STEP=$WRF_TIME_STEP
+fi
+# Else, the WRF will use the default for the domain configuration in execution
+
+
+# ========================================================
+#
+#             PROCESSING: Download MET GLOBAL data
+#
+# ========================================================
+
+# The function fetch_global_data expects. Parameter:
+#    $1 : directory to download
+#    $2 : date-time of start of simulation: 2021-12-01-00 (00UTC)
+#    $3 : time of forecast (in hours): 24, 48, 72
+#    $4 : time step of global data (in hours): 1 (cptec-wrf), 3 (gfs), 6 (gfs)
+#    $5 : gfs1p00 gfs0p50 gfs0p25 cptec_wrf_5km
+
+# Obs: the value of variable GLOBAL_DATE_TIME_INTERVAL (in hour) is the same of
+#      the parameter "interval_seconds" (in s) from "namelist.input"
+
+# 20211223: if there was a problem, then retry. Retry more two times, then
+#           switch to another global data. 
+# TODO TODO TODO  this need MUCH MORE study. But, for now, only the basic.
+
+status=0
+for i in {1..5}
+do
+    ${CURRENT_DIR}/utils/fetch_global_data.sh  ${DIR_WPS_INPUT} ${START_YEAR}-${START_MONTH}-${START_DAY}-${START_HOUR} ${RUN_TIME_HOURS} ${GLOBAL_DATE_TIME_INTERVAL} ${GLOBAL_DATA}
+    status=$(echo $?)
+done
+
+if [ $status -eq 2 ]; then
+    shutdown_execution "ERROR: parameters for fetch_global_data.sh are INCORRECT."
+fi
+
+if [ $status -eq 1 ]; then
+    shutdown_execution "ERROR: in the creation of the WPS data dir: ."
+fi
+
+
+if [ $i -eq 5 ] && [ $status -ne 0 ]; then
+    shutdown_execution "ERROR: in fetching global data."
+fi
+
+
+# ========================================================
+#
+#             PROCESSING: Some directories checking
+#
+# ========================================================
+
+    
 if [ ! -d $GEODATA_PATH ]; then
-    echo "   "
-    echo "ERRO. Dados de terreno não existem no diretório WPS/geog. ERRO"
-    echo "   Instale-os a partir do script de instalação. "
-    echo " Saindo ..."
-    exit 1
+    shutdown_execution "ERROR: no terrain data in WPS/geog. Leaving ..." 1 
 fi
 
 
-case $CONFIG in
-############   CONF a - TRES DOMINIOS   ################
-[aA]) # Configuração com tres dominios 
-        # Variáveis usadas no mm5.deck do MM5.
-        export _NESTIX_1=90;  export _NESTJX_1=90
-        export _NESTIX_2=91;  export _NESTJX_2=97
-        export _NESTIX_3=100;  export _NESTJX_3=106
-        export _NESTI_2=34;   export _NESTJ_2=40
-        export _NESTI_3=16;   export _NESTJ_3=34
-        # Variáveis usadas no configure.user do MM5.
-        export _MIX=100;       export _MJX=106
-        export _MAXNES=3
-
-        export _PARENT_ID_2=1;  export _PARENT_ID_3=2
-        export _I_PARENT_START_2=38 ; export _I_PARENT_START_3=43
-        export _J_PARENT_START_2=35 ; export _J_PARENT_START_3=14
-
-        export _GEODATA_RES_1=10m; export _GEODATA_RES_2=5m; export _GEODATA_RES_3=2m
-        export _MAP_PROJECTION=lambert
-        export _E_WE_1=90;  export _E_WE_2=109;  export _E_WE_3=109
-        export _E_SN_1=90;  export _E_SN_2=97;  export _E_SN_3=109
-        export _DX_1=36000; export _DX_2=12000; export _DX_3=4000
-        export _DY_1=36000; export _DY_2=12000; export _DY_3=4000
-        export _REF_LAT=-30.166;   export _REF_LON=-55.212
-        export _TRUELAT1=-30.166; export _TRUELAT2=-30.166; export _STAND_LON=-55.212
-        
-        proxima_rodada
-;;
-[bB]) 
-;;
-[cC])
-;;
-[dD]) # Configuração da area de Sao Paulo
-        export _NESTIX_1=90;  export _NESTJX_1=90
-        export _NESTIX_2=91;  export _NESTJX_2=97
-        export _NESTIX_3=100;  export _NESTJX_3=106
-        export _NESTI_2=34;   export _NESTJ_2=40
-        export _NESTI_3=16;   export _NESTJ_3=34
-        export _MIX=100;       export _MJX=106
-        export _MAXNES=3
-
-        export _PARENT_ID_2=1;  export _PARENT_ID_3=2
-        export _I_PARENT_START_2=38 ; export _I_PARENT_START_3=43
-        export _J_PARENT_START_2=35 ; export _J_PARENT_START_3=14
-
-        export _GEODATA_RES_1=10m; export _GEODATA_RES_2=5m; export _GEODATA_RES_3=2m
-        export _MAP_PROJECTION=lambert
-        export _E_WE_1=90;  export _E_WE_2=109;  export _E_WE_3=109
-        export _E_SN_1=90;  export _E_SN_2=97;  export _E_SN_3=109
-        export _DX_1=36000; export _DX_2=12000; export _DX_3=4000
-        export _DY_1=36000; export _DY_2=12000; export _DY_3=4000
-        export _REF_LAT=-30.166;   export _REF_LON=-55.212
-        export _TRUELAT1=-30.166; export _TRUELAT2=-30.166; export _STAND_LON=-55.212
-
-        proxima_rodada
-;;
-
-[lL]) # Dois dominios: 
-# D1: 90x90 18km = Região Sul
-# D2: 133x133 6km = Leste de RS/SC/PR
-        export _NESTIX_1=90;  export _NESTJX_1=90
-        export _NESTIX_2=133;  export _NESTJX_2=133
-#        export _NESTIX_3=100;  export _NESTJX_3=106
-        export _NESTI_2=31;   export _NESTJ_2=27
-        export _MIX=133;       export _MJX=133
-        export _MAXNES=2
-
-        export _PARENT_ID_2=1;
-        export _I_PARENT_START_2=31 ; 
-        export _J_PARENT_START_2=27 ; 
-
-        export _GEODATA_RES_1=10m; export _GEODATA_RES_2=5m;
-        export _MAP_PROJECTION=lambert
-        export _E_WE_1=90;  export _E_WE_2=133;
-        export _E_SN_1=90;  export _E_SN_2=133;
-        export _DX_1=18000; export _DX_2=6000;
-        export _DY_1=18000; export _DY_2=6000;
-        export _REF_LAT=-28;   export _REF_LON=-51;
-        export _TRUELAT1=-28.921; export _TRUELAT2=-28.921; export _STAND_LON=-50.857
-
-        proxima_rodada
-
-;; 
-
-
-*) echo "Não válida ..."
-esac
-
-# Em 26set13: O estabelecimento de quais niveis ETA e onde sera setado devera ser incluido no script
-#             principal. Foi retirado do script namelist.input.wrf.sh.
-if [ $MKX -eq 31 ]; then
-#  ETA_LEVELS=1.000,0.997,0.995,0.990,0.985,0.980,0.975,0.970,0.965,0.955,0.945,0.920,0.890,0.850,0.800,0.750,0.700,0.650,0.600,0.550,0.500,0.450,0.400,0.350,0.300,0.250,0.200,0.150,0.100,0.050,0.000,
-export NUM_NIVEIS_ETA_SIGMA=1.000,0.997,0.995,0.990,0.985,0.980,0.975,0.970,0.965,0.955,0.945,0.930,0.910,0.890,0.850,0.800,0.750,0.700,0.650,0.600,0.550,0.500,0.450,0.400,0.350,0.300,0.250,0.200,0.150,0.050,0.000,
-fi
-
-
-if [ ! -d $WPS_PATH/data ]; then
-    mkdir -p $WPS_PATH/data
+if [ ! -d ${WPS_PATH}/data ]; then
+    mkdir -p ${WPS_PATH}/data
     #  Em 18jul10: vamos deixar para apagar depois.
     #  rm -rf $WPS_PATH/data/*
 fi
 
-# Em 18jul10: se não houver o diretório então há duas opções:
-# - primeira rodada; ou
-# - rodada anterior com erro e foi escolhida a opção (a) na função proxima_rodada ().
-if [ ! -d $DIR_SAIDA_WRF ]; then
-    mkdir $DIR_SAIDA_WRF
+# Em 18jul10: se não houver o diretório então há duas opções
+if [ ! -d ${DIR_WRF_OUTPUT} ]; then
+    mkdir -p ${DIR_WRF_OUTPUT}
 fi
 
-# Em 17jul10: criação do arquivo DIR_SAIDA_WRF/status-components-out-execution.log com os valores
+
+# ========================================================
+#
+#              PROCESSING:  Logging 
+#
+# ========================================================
+
+
+# Em 17jul10: criação do arquivo DIR_WRF_OUTPUT/status-components-out-execution.log com os valores
 #             que definem o status dos vários processamentos. Valores:
 #      0 SUCESSO          diferente de 0 ERRO
 #            Por padrão, todos serão setados para 1, caso o processamento tenha
 #            sucesso, será ajustado para 0.
-if test ! -e $DIR_SAIDA_WRF/status-components-out-execution.log ; then
-  touch $DIR_SAIDA_WRF/status-components-out-execution.log
-  echo "# Valores que definem o status dos vários processamentos." >>  $DIR_SAIDA_WRF/status-components-out-execution.log
-  echo "#    0 SUCESSO     diferente de 0 ERRO " >> $DIR_SAIDA_WRF/status-components-out-execution.log
-  echo "GEOGRID 1" >> $DIR_SAIDA_WRF/status-components-out-execution.log
-  echo "UNGRIB 1" >> $DIR_SAIDA_WRF/status-components-out-execution.log
-  echo "METGRID 1" >> $DIR_SAIDA_WRF/status-components-out-execution.log
-  echo "REAL 1" >> $DIR_SAIDA_WRF/status-components-out-execution.log
-  echo "WRF 1" >> $DIR_SAIDA_WRF/status-components-out-execution.log
-  echo "ARWPOST 1" >> $DIR_SAIDA_WRF/status-components-out-execution.log
-  echo "GRADS 1" >> $DIR_SAIDA_WRF/status-components-out-execution.log
+if test ! -e ${DIR_WRF_OUTPUT}/status-components-out-execution.log ; then
+  touch ${DIR_WRF_OUTPUT}/status-components-out-execution.log
+  echo "# Valores que definem o status dos vários processamentos." >>  ${DIR_WRF_OUTPUT}/status-components-out-execution.log
+  echo "#    0 SUCESSO     diferente de 0 ERRO " >> ${DIR_WRF_OUTPUT}/status-components-out-execution.log
+  echo "GEOGRID 1" >> ${DIR_WRF_OUTPUT}/status-components-out-execution.log
+  echo "UNGRIB 1" >> ${DIR_WRF_OUTPUT}/status-components-out-execution.log
+  echo "METGRID 1" >> ${DIR_WRF_OUTPUT}/status-components-out-execution.log
+  echo "REAL 1" >> ${DIR_WRF_OUTPUT}/status-components-out-execution.log
+  echo "WRF 1" >> ${DIR_WRF_OUTPUT}/status-components-out-execution.log
+  echo "ARWPOST 1" >> ${DIR_WRF_OUTPUT}/status-components-out-execution.log
+  echo "GRADS 1" >> ${DIR_WRF_OUTPUT}/status-components-out-execution.log
 fi
 
 
 
 
+echo " " >> ${DIR_DATA_OUTPUT}/wrf-executions.log
+echo "START: ${START_YEAR}-${START_MONTH}-${START_DAY}-${START_HOUR}" >> ${DIR_DATA_OUTPUT}/wrf-executions.log
+echo "END: ${END_YEAR}-${END_MONTH}-${END_DAY}-${END_HOUR} " >> ${DIR_DATA_OUTPUT}/wrf-executions.log
+echo -e "RUN TIME (hours): ${RUN_TIME_HOURS}  WRF_TIME_STEP (s): ${_WRF_TIME_STEP}" >> ${DIR_DATA_OUTPUT}/wrf-executions.log
+
 
 ###########################################################
 ###########################################################
-#               INÍCIO DO PROCESSAMENTO
 #
+#               START OF PROCESSING
+#
+#            WPS -> WRF -> POST-PROCESSING
+# WPS: geogrid -> ungrib -> metgrid
+# WRF: real.exe -> wrf.exe
 ###########################################################
 ###########################################################
+
+# Em 24mai08: modificacao da variavel abaixo, pois no crontab ela nao era ajustada
+#             de forma correta (algum problema com o retorno do pwd). Somente no run3.sh.
+# CURRENT_DIR=/home/$USER/modelo
+# Em 01mai11: variável será exportada, pois será usada por um outro script
+#  (compilar-mm5.sh)
+# Em 28mar13: a variavel CURRENT_DIR será ajustada no início e deve conter, geralmente, o diretório
+#             onde se encontra o script do modelo.
+if [ $DH_HOW_RUN_SCRIPT = "AUTOMATIC" ]; then
+    export CURRENT_DIR
+else
+    export CURRENT_DIR=$(pwd)
+fi
+
+
 # Valores para status:
 # 0 = diretório já existe e a rodada foi completada
 # 1 = diretório já existe e a rodada não foi completada com sucesso
 # 2 = diretório não existe ainda
-echo 1 > $DIR_SAIDA_WRF/status-current-configuration.log
+echo 1 > ${DIR_WRF_OUTPUT}/status-current-configuration.log
 
 
+# 20220309: If we need use static namelist files (WPS and WRF), then the variable need setted to "yes".
+#   Else, the normal execution is a dynamic generation of namelist files.
+if [ x$USE_STATIC_NAMELIST_FILES == x"no" ]; then
 
-# ========================================================
-# WPS: criação do namelist.wps que é usado
-#      pelos programas geogrib.exe, ungrib.exe e metgrid.exe
-# ========================================================
-cd $WPS_PATH
-cp $DIR_CORRENTE/wrf/namelist.wps.sh $WPS_PATH/
-chmod u+x $WPS_PATH/namelist.wps.sh
-if [ -e $WPS_PATH/namelis.wps ]; then
-    rm -f $WPS_PATH/namelist.wps
-fi
+    mensagem ">>>>>>>>  Generating ${WPS_PATH}/namelist.wps   (STARTING)"
 
-$WPS_PATH/namelist.wps.sh  WPS  $WPS_PATH/data/FILE
-
-cp $WPS_PATH/namelist.wps $DIR_SAIDA_WRF
+    # >>>>>>>       NAMELIST.WPS --- START
+    #  This namelist is used by: geogrib.exe, ungrib.exe, and metgrid.exe
 
 
+    #  This script create the namelist.wps with values  obtained from exported variables.
+    #  The function namelist.wps.sh expects these parameters:
+    #    $1 : output format: WPS
+    #    $2 : prefix (path+prefix) of data
+    #    $3 : date-time of start of simulation: 2021-12-01-00 (00UTC)
+    #    $4 : date-time of ending of simulationt (final date-time): 2021-12-02-00 (00UTC)
+    #    $5 : temporal interval in which the input data are available (time step of global data, in hours): 1 (for cptec-wrf), 3 (for gfs), 6 (for gfs)
+    #    $6 : directory of static geographical data (topo, veg, soil use)
+    
+    cd $WPS_PATH
+    cp ${CURRENT_DIR}/wps/namelist.wps.sh ${WPS_PATH}/
+    chmod u+x ${WPS_PATH}/namelist.wps.sh
+    if [ -e ${WPS_PATH}/namelist.wps ]; then
+        rm -f ${WPS_PATH}/namelist.wps
+    fi
+
+    ${WPS_PATH}/namelist.wps.sh  WPS  ${WPS_PATH}/data/FILE ${START_YEAR}-${START_MONTH}-${START_DAY}-${START_HOUR} ${END_YEAR}-${END_MONTH}-${END_DAY}-${END_HOUR} ${GLOBAL_DATE_TIME_INTERVAL} $GEODATA_PATH
+    status=$?
+
+    # First, backup the log file to the WRF output dir
+    cp ${WPS_PATH}/namelist.wps ${DIR_WRF_OUTPUT} 2>/dev/null
+
+    # Next, verify the output from status
+    [[ $status -ne 0 ]] && shutdown_execution  "ERROR in (${WPS_PATH}/namelist.wps.sh). Exiting ..."  1
+
+    mensagem "<<<<<<<  Generating ${WPS_PATH}/namelist.wps   (ENDING)"
+
+fi #  if [ x$USE_STATIC_NAMELIST_FILES == x"no" ]; then
 
 
 # ========================================================
@@ -1041,28 +1795,68 @@ cp $WPS_PATH/namelist.wps $DIR_SAIDA_WRF
 #         terrestrial data sets to the model grids 
 #   Arquivo configuração: WPS/geogrid/GEOGRID.TBL
 # ========================================================
-status=$(cat $DIR_SAIDA_WRF/status-components-out-execution.log | grep "GEOGRID" | cut -d' ' -f2)
-if [ $status -ne 0 ]; then
+
+
+status=$(cat ${DIR_WRF_OUTPUT}/status-components-out-execution.log | grep "GEOGRID" | cut -d' ' -f2)
+if [ $status -ne 0 ] && [ $USE_GENERATED_GEOGRID = "yes" ]; then
+    mensagem ">>>>>>> Program geogrid.exe (STARTING)"
     #  Em 18jul10: como estamos começando tudo do início, apagaremos o conteúdo.
-    rm -rf $WPS_PATH/data/*
+    rm -rf ${WPS_PATH}/data/* 2>/dev/null
 
     cd $WPS_PATH
-    if [ -e geogrid/GEOGRID.TBL ]; then
-      rm -f geogrid/GEOGRID.TBL
+    if [ -e ${WPS_PATH}/geogrid/GEOGRID.TBL ]; then
+      rm -f ${WPS_PATH}/geogrid/GEOGRID.TBL 2>/dev/null
     fi
-    ln -s $WPS_PATH/geogrid/GEOGRID.TBL.ARW $WPS_PATH/geogrid/GEOGRID.TBL
-    ./geogrid.exe >& geogrid-$DATA$HORA_INICIAL.log
-    grep -i "Successful completion of geogrid." geogrid-$DATA$HORA_INICIAL.log
-    retorno=$(echo $?)
-    cp geogrid-$DATA$HORA_INICIAL.log $DIR_SAIDA_WRF
-    if test $retorno -ne 0 ; then
-      echo -e "\nERRO   Problema na execucao do WPS/geogrid/geogrid.exe. Saindo ...   ERRO"
-      exit 1
-    fi
+    
+    # TODO TODO
+    ln -s ${WPS_PATH}/geogrid/GEOGRID.TBL.ARW ${WPS_PATH}/geogrid/GEOGRID.TBL
+    
+    ./geogrid.exe >& geogrid-${START_YEAR}${START_MONTH}${START_DAY}${START_HOUR}.log    
+    
+    grep -i "Successful completion of geogrid." geogrid-${START_YEAR}${START_MONTH}${START_DAY}${START_HOUR}.log
+    status=$(echo $?)
+    
+    # First, backup the log.
+    cp geogrid-${START_YEAR}${START_MONTH}${START_DAY}${START_HOUR}.log ${DIR_WRF_OUTPUT}
+    
+
+    mensagem "ERROR in (./geogrid.exe >& geogrid-${START_YEAR}${START_MONTH}${START_DAY}${START_HOUR}.log). We will USE GENERATED geo_em.d0[03] geogrid file."
+    
+
+    mensagem "<<<<<<< Program geogrid.exe (ENDING)"
+    
+    # Only adjusts SUCCESS to GEOGRID if there were no ERROR
+    sed -i /GEOGRID/s/1/0/ ${DIR_WRF_OUTPUT}/status-components-out-execution.log
+    
 fi
-sed -i /GEOGRID/s/1/0/ $DIR_SAIDA_WRF/status-components-out-execution.log
 
+if [ $status -ne 0 ] || [ $USE_GENERATED_GEOGRID = "yes" ]; then
+  # We can copy the  geogrid file generated previously via the program WRFDomainWizard if
+  #   a) the status of processing geogrid resulted in ERROR (NO shutdown the execution)
+  #   b) or, because the user choose --use-generated-geogrid
+        #  Em 18jul10: como estamos começando tudo do início, apagaremos o conteúdo.
+    rm -rf ${WPS_PATH}/data/* 2>/dev/null
+    
+    mensagem ">>>>>>> GEOGRID: copying the file(s) ${CURRENT_DIR}/config-domains/${CONFIG_NAME}/geo_em.d0[03].nc to the dir: ${WPS_PATH}/data (STARTING)"
+        
+    cp ${CURRENT_DIR}/config-domains/${CONFIG_NAME}/geo_em.d0?.nc ${WPS_PATH}/data
+        
+    cp ${CURRENT_DIR}/config-domains/${CONFIG_NAME}/geogrid.log ${DIR_WRF_OUTPUT}
+    
+    case $_MAX_DOMAIN in
+    [1] ) [[ -e ${WPS_PATH}/data/geo_em.d01.nc ]] || shutdown_execution  "ERROR in GEOGRID. File ${WPS_PATH}/data/geo_em.d01.nc missing. Exiting ..." 1 ;;
+    [2] ) [[ -e ${WPS_PATH}/data/geo_em.d01.nc ]] && [[ -e ${WPS_PATH}/data/geo_em.d02.nc ]] || shutdown_execution  "ERROR in GEOGRID. Files ${WPS_PATH}/data/geo_em.d0{1,2}.nc missing. Exiting ..." 1 ;;
+    [3] ) [[ -e ${WPS_PATH}/data/geo_em.d01.nc ]] && [[ -e ${WPS_PATH}/data/geo_em.d02.nc ]] && [[ -e ${WPS_PATH}/data/geo_em.d03.nc ]] || shutdown_execution  "ERROR in GEOGRID. Files ${WPS_PATH}/data/geo_em.d0{1,2,3].nc missing. Exiting ..." 1 ;;
+    *) echo ;;
+    esac
+    
+        
+    # Only adjusts SUCCESS to GEOGRID if there were no ERROR
+    sed -i /GEOGRID/s/1/0/ ${DIR_WRF_OUTPUT}/status-components-out-execution.log
 
+    mensagem ">>>>>>> GEOGRID: copying the file(s) ${CURRENT_DIR}/config-domains/${CONFIG_NAME}/geo_em.d0[03].nc to the dir: ${WPS_PATH}/data (FINISHING)"    
+        
+    fi
 
 # ========================================================
 #  UNGRIB
@@ -1070,354 +1864,475 @@ sed -i /GEOGRID/s/1/0/ $DIR_SAIDA_WRF/status-components-out-execution.log
 #
 #  Em 08jul10: Como o processamento do ungrib é usado tanto pelo
 #       MM5 quanto pelo WRF, a execução será através do script
-#       processa_ungrib.sh. A definição de qual saída (MM5 ou WPS)
+#       process_ungrib.sh. A definição de qual saída (MM5 ou WPS)
 #       será gerada, está definida no namelist.wps, que será criado
-#       no início do processamento do WPS. Cap Gerson.
-#  Em 25out20: houve alteração no nome dos arquivos NCEP, logo o processa_ungrib.sh
+#       no início do processamento do WPS.
+#  Em 25out20: houve alteração no nome dos arquivos NCEP, logo o process_ungrib.sh
 #       deverá ser alterado
 # ========================================================
-status=$(cat $DIR_SAIDA_WRF/status-components-out-execution.log | grep "UNGRIB" | cut -d' ' -f2)
+status=$(cat ${DIR_WRF_OUTPUT}/status-components-out-execution.log | grep "UNGRIB" | cut -d' ' -f2)
 if [ $status -ne 0 ]; then
-    cd $WPS_PATH
-    cp $DIR_CORRENTE/wrf/processa_ungrib.sh $WPS_PATH
-    chmod u+x processa_ungrib.sh
-    #cp $DIR_CORRENTE/wrf/link_grib-data.csh $WPS_PATH
-    cp $DIR_CORRENTE/wrf/link_grib.csh $WPS_PATH
-    # Em 01jun2021: resol dados globais passado como parametro, pois o
-    #        nome do arquivo sera diferente.
-    ./processa_ungrib.sh  $RES_G_NCEP
-    retorno=$(echo $?)
-    cp ungrib-$DATA$HORA_INICIAL.log $DIR_SAIDA_WRF
-    if test $retorno -ne 0 ; then
-        echo -e "\nERRO   Problema na execucao do WPS/ungrib/ungrib.exe. Saindo ...   ERRO"
-        exit 1;
-    fi
+    mensagem ">>>>>>> Program ungrib.exe (STARTING)"
+    cd ${WPS_PATH}
+    
+    cp ${CURRENT_DIR}/wps/executes_ungrib.sh ${WPS_PATH}
+    chmod u+x ${WPS_PATH}/executes_ungrib.sh
+    cp ${CURRENT_DIR}/wps/link_grib.csh ${WPS_PATH}
+    chmod u+x ${WPS_PATH}/link_grib.csh
+    
+    # 20220201: the script executes_ungrib.sh expects:
+    #  $1 : directory of global data
+    #       DIR_WPS_INPUT=DIR_DATA_INPUT/yyyy-mm-dd-HH-[gfs|cptec-wrf]
+    #  $2 : time of initialization: 00 06 12 18
+    #  $3 : gfs1p00 gfs0p50 gfs0p25 cptec_wrf_5km    
+    ${WPS_PATH}/executes_ungrib.sh ${DIR_WPS_INPUT} ${START_YEAR}-${START_MONTH}-${START_DAY}-${START_HOUR} ${START_HOUR} ${GLOBAL_DATA}
+    status=$(echo $?)
+
+    # First, backup the log.
+    cp ungrib-${START_YEAR}${START_MONTH}${START_DAY}${START_HOUR}.log ${DIR_WRF_OUTPUT} 2>/dev/null
+    
+    # Next, verify the output from status
+    [[ ${status}  -ne 0 ]] && shutdown_execution "ERROR in (${WPS_PATH}/executes_ungrib.sh ${DIR_WPS_INPUT} ${START_YEAR}-${START_MONTH}-${START_DAY}-${START_HOUR} ${START_HOUR} ${GLOBAL_DATA}). Leaving ..." 1
+    
+    mensagem "<<<<<<< Program ungrib.exe (ENDING)"
+    
+    # Only adjusts SUCCESS to UNGRIB if there were no ERROR
+    sed -i /UNGRIB/s/1/0/ ${DIR_WRF_OUTPUT}/status-components-out-execution.log
+    
 fi
-sed -i /UNGRIB/s/1/0/ $DIR_SAIDA_WRF/status-components-out-execution.log
 
 
 # ========================================================
 #  METGRID: interpolate the input data onto our model domain (metgrid.exe)
 #   Arquivo configuração: WPS/metgrid/METGRID.TBL
 # ========================================================
-status=`cat $DIR_SAIDA_WRF/status-components-out-execution.log | grep -i "METGRID" | cut -d' ' -f2`
+status=$(cat ${DIR_WRF_OUTPUT}/status-components-out-execution.log | grep -i "METGRID" | cut -d' ' -f2)
 if [ $status -ne 0 ]; then
+    mensagem ">>>>>>> Program metgrid.exe (STARTING)"
+    
     cd $WPS_PATH
-    if [ -e metgrid/METGRID.TBL ]; then
-      rm -f metgrid/METGRID.TBL
+    if [ -e ${WPS_PATH}/metgrid/METGRID.TBL ]; then
+      rm -f ${WPS_PATH}/metgrid/METGRID.TBL
     fi
-    ln -s $WPS_PATH/metgrid/METGRID.TBL.ARW $WPS_PATH/metgrid/METGRID.TBL
-    ./metgrid.exe >& metgrid-$DATA$HORA_INICIAL.log
+    
+    ln -s ${WPS_PATH}/metgrid/METGRID.TBL.ARW ${WPS_PATH}/metgrid/METGRID.TBL
+    
+    ./metgrid.exe >& metgrid-${START_YEAR}${START_MONTH}${START_DAY}${START_HOUR}.log
 
-    cat metgrid-$DATA$HORA_INICIAL.log | grep -i "Successful completion of metgrid."
-    retorno=$(echo $?)
-    cp metgrid-$DATA$HORA_INICIAL.log $DIR_SAIDA_WRF
-    if test $retorno -ne 0 ; then
-      echo -e "\nERRO   Problema na execucao do WPS/metgrid/metgrid.exe. Saindo ...   ERRO"
-      exit 1
-    fi
+    grep -i "Successful completion of metgrid." metgrid-${START_YEAR}${START_MONTH}${START_DAY}${START_HOUR}.log
+    status=$(echo $?)
+
+    # First, backup the log.
+    cp metgrid-${START_YEAR}${START_MONTH}${START_DAY}${START_HOUR}.log ${DIR_WRF_OUTPUT}
+
+    # Next, verify the output from status
+    [[ $status -ne 0 ]] && shutdown_execution "ERROR in (./metgrid.exe >& metgrid-${START_YEAR}${START_MONTH}${START_DAY}${START_HOUR}.log). Leaving ..." 1
+    
+    mensagem "<<<<<<< Program metgrid.exe (ENDING)"
+    
+    # Only adjusts SUCCESS to METGRID if there were no ERROR
+    sed -i /METGRID/s/1/0/ ${DIR_WRF_OUTPUT}/status-components-out-execution.log
 fi
-sed -i /METGRID/s/1/0/ $DIR_SAIDA_WRF/status-components-out-execution.log
 
 
 # ========================================================
-#  COPIAR LOGS + namelist.wps para
+#  namelist.input  Generates from option VARIABLES
+#  Files: WRF/run/namelist.input and WRF/test/em_real/namelist.input
 # ========================================================
 
+# 20220309: If we need use static namelist files (WPS and WRF), then the variable need setted to "yes".
+#   Else, the normal execution is a dynamic generation of namelist files.
+if [ x$USE_STATIC_NAMELIST_FILES == x"no" ]; then
+    mensagem ">>>>>>>>  Generating ${WRF_PATH}/run/namelist.input --- STARTING"
+    #  This script create the namelist.input with values obtained from exported variables.
+        #  The function namelist.input.wrf.sh expects these parameters:
+        #    $1 : number of NUM_METGRID_LEVELS
+        #    $2 : date-time of start of simulation: 2021-12-01-00 (00UTC)
+        #    $3 : run time length of forecast (in hours): 24, 48, 72
+        #    $4 : temporal interval in which the input data are available (time step of global data, in hours): 1 (cptec-wrf), 3 (gfs), 6 (gfs)
 
-# ========================================================
-#  WRF
-# ========================================================
-status=`cat $DIR_SAIDA_WRF/status-components-out-execution.log | grep -i "REAL" | cut -d' ' -f2`
-if [ $status -ne 0 ]; then
-    cd $WRF_PATH/run
-    rm -f met_em*
-    for met_em_files in $WPS_PATH/data/met_em*
-    do
-      ln -s $met_em_files
-    done
+    cp ${CURRENT_DIR}/wrf/namelist.input.wrf.sh  ${WRF_PATH}/test/em_real/
 
-    cp $DIR_CORRENTE/wrf/namelist.input.wrf.sh  $WRF_PATH/test/em_real/
+
+    # Apagar o arquivo (link) namelis.input anterior
+    if [ -e ${WRF_PATH}/test/em_real/namelist.input ]; then
+        rm -f ${WRF_PATH}/test/em_real/namelist.input 2>/dev/null
+    fi
 
     # Em 19jun2021: considerando problemas de usar um mesmo
     #   binário para diferentes plataformas, será usada a versão
     #   compilada durante instalação do NetCDF
     #   Normalmente instalado em: /home/USER/bin/lib/netcdf/bin/ncdump
-    
-    cp $DIR_CORRENTE/wrf/ncdump $WRF_PATH/run/
-    # Em 18jul10: O utilitário ncdump verificará o valor de num_metgrid_levels.
-    # Em 25set13: na instalacao padrao o ncdump nao teve setada a execucao.
-    #             Sera incluido no script de instalacao install.sh.
-
-    #   NUM_METGRID_LEVELS=`$WRF_PATH/run/ncdump -h $WPS_PATH/data/met_em.d01.$INICIO_ANO-$INICIO_MES-$INICIO_DIA'_'$INICIO_HORA:00:00.nc | grep num_metgrid_levels | head -n1 | cut -d' ' -f 3`
-    # Em 19jun2021: será usado ncdump da versão instalada pelo NetCDF
-    NUM_METGRID_LEVELS=$(ncdump -h $WPS_PATH/data/met_em.d01.$INICIO_ANO-$INICIO_MES-$INICIO_DIA'_'$INICIO_HORA:00:00.nc | grep num_metgrid_levels | head -n1 | cut -d' ' -f 3)
-
-
-# TODO TODO testar o resultado do COMANDO NCDUMP ANTES DE SEGUIR
-
-    # Apagar o arquivo (link) namelis.input anterior
-    if [ -e test/em_real/namelist.input ]; then
-      rm -f test/em_real/namelist.input
-    fi
-    # Criação do namelist.input
-    cd $WRF_PATH/test/em_real/
-    chmod u+x namelist.input.wrf.sh
-    ./namelist.input.wrf.sh $NUM_METGRID_LEVELS
-
-
-    cd $WRF_PATH/run
-    rm -f namelist.input
-    
-    ln -s $WRF_PATH/test/em_real/namelist.input .
-
-    # Em 20dez2020: inclusao . Nao sera preciso, pois os arquivos ja sao criados
-    #   anteriormente 
-    #  ln -sf "$WPS_PATH/data/met_em.d0?.20??-*" .
-    
-    # Em 21dez2020: nao e gerada saia que possa ser capturada.    
-    # ./real.exe >& real-$DATA$HORA_INICIAL.log
-    # cat real-$DATA$HORA_INICIAL.log | grep -i "SUCCESS COMPLETE REAL_EM INIT"
-    # retorno=`echo $?`
-    # mv real-$DATA$HORA_INICIAL.log $DIR_SAIDA_WRF
-    
-    mpirun -np $NUM_PROC $WRF_PATH/run/real.exe
-    #    cat rsl.out.0000 | grep -i "SUCCESS COMPLETE REAL_EM INIT"
-    #  Em 20210826: segue o teste sugerido pela documentação:
-    # cat rsl.out.0000 | grep -i "SUCCESS COMPLETE WRF"
-    if [ ! -e rsl.out.0000 ]; then
-      echo "ERRO Problema na execucao do real.exe (não foi gerado rsl.out.0000). Saindo ..."
-      exit 1
-    fi    
         
-    grep -i "SUCCESS COMPLETE REAL_EM INIT" rsl.out.0000
-    retorno=$(echo $?)
-    
-    if test $retorno -ne 0 ; then
-      echo "ERRO   Problema na execucao do real.exe. Saindo ...    ERRO"
-      exit 1
+    cp ${CURRENT_DIR}/wrf/ncdump ${WRF_PATH}/run/
+        
+    # 20210619: será usado ncdump da versão instalada pelo NetCDF
+    NUM_METGRID_LEVELS=$(${WRF_PATH}/run/ncdump -h ${WPS_PATH}/data/met_em.d01.${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}:00:00.nc | grep num_metgrid_levels | head -n1 | cut -d' ' -f 3)
+    status=$?
+
+    ## DEBUG
+    f_debug $0 NUM_METGRID_LEVELS $NUM_METGRID_LEVELS
+        
+    # This test is a minimum requirement, because there were more specific
+    if [[ $? -ne 0 ]] || [[ $NUM_METGRID_LEVELS -lt 25 ]] || [[ $NUM_METGRID_LEVELS -gt 60 ]]; then
+        shutdown_execution  "ERROR in (${WRF_PATH}/run/ncdump -h ${WPS_PATH}/data/met_em.d01.${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}:00:00.nc): status or number of leves retorned. Exiting."  1
     fi
-    # Copiar o arquivo para o diretorio de saida de dados
-    cp rsl.out.0000 "$DIR_SAIDA_WRF/real-$DATA$HORA_INICIAL.log"    
+
+    cd ${WRF_PATH}/test/em_real/ 2>/dev/null
+        
+    chmod u+x ${WRF_PATH}/test/em_real/namelist.input.wrf.sh
+        
+    ./namelist.input.wrf.sh ${NUM_METGRID_LEVELS} ${START_YEAR}-${START_MONTH}-${START_DAY}-${START_HOUR}  ${END_YEAR}-${END_MONTH}-${END_DAY}-${END_HOUR}  ${RUN_TIME_HOURS} ${GLOBAL_DATE_TIME_INTERVAL}
+    # First, save the status of execution, and,
+    status=$?
+
+    # Backup the log file to the WRF output dir
+    cp ${WRF_PATH}/test/em_real/namelist.input ${DIR_WRF_OUTPUT}  2>/dev/null
+        
+    # Next, verify the output from status
+    [[ ${status} -ne 0 ]] && shutdown_execution  "ERROR: problem in execution of ${WPS_PATH}/namelist.wps.sh. Exiting."  1
+    
+    # Copy the namelist.input to WRF/run (the output running WRF)
+    #    and to the WRF output data
+    rm -f ${WRF_PATH}/run/namelist.input 2>/dev/null
+    cp ${WRF_PATH}/test/em_real/namelist.input ${WRF_PATH}/run  2>/dev/null
+            
+
+    mensagem "<<<<<<<  Generating ${WRF_PATH}/run/namelist.input --- ENDING"
+
+fi # [ x$USE_STATIC_NAMELIST_FILES == x"no" ]; then
+
+
+# ========================================================
+#  WRF -> real.exe   Creation the LBC (Lateral and Boundary Conditions)
+#     Configuration: WRF/run/namelist.input
+#     Input data (files): met_em.d01.$INICIO_START_YEAR-$INICIO_START_MONTH-$INICIO_
+#     Output data (files): wrfinput_d0?   wrfbdy_d0? 
+# ========================================================
+status=$(cat ${DIR_WRF_OUTPUT}/status-components-out-execution.log | grep -i "REAL" | cut -d' ' -f2)
+if [ $status -ne 0 ]; then
+
+    mensagem ">>>>>>> Program real.exe (STARTING)"
+    
+    # DIR of working WRF
+    cd ${WRF_PATH}/run
+    
+    ### Remove old stuff
+    # INPUT data for real: not the date generated by the output from metgrid, but
+    # the LINKS for that data
+    rm -f ${WRF_PATH}/test/em_real/met_em* 2>/dev/null
+    rm -f ${WRF_PATH}/test/em_real/rsl.{out,error}.0??? 2>/dev/null
+    
+    rm -f ${WRF_PATH}/run/met_em* 2>/dev/null
+    rm -f ${WRF_PATH}/run/rsl.{out,error}.0??? 2>/dev/null
+    
+    # OUTPUT data from real.exe    
+    rm -f ${WRF_PATH}/test/em_real/wrfinput_d0? > /dev/null
+    rm -f ${WRF_PATH}/test/em_real/wrfbdy_d0? > /dev/null
+        
+    rm -f ${WRF_PATH}/run/wrfinput_d0? > /dev/null
+    rm -f ${WRF_PATH}/run/wrfbdy_d0? > /dev/null
+    
+    for met_em_files in ${WPS_PATH}/data/met_em*
+    do
+      ln -s ${met_em_files} ${WRF_PATH}/test/em_real/
+      ln -s ${met_em_files} ${WRF_PATH}/run/
+    done
+
+    mensagem ">>>>>>>>  Running:(mpirun -np ${NUM_PROC} ${WRF_PATH}/run/real.exe) --- STARTING"
+              
+    mpirun -v --map-by core -np $NUM_PROC ${WRF_PATH}/run/real.exe
+    status=$?
+
+    # First, backup the LOG and OUTPUT files to the WRF output dir    
+    # rsl.{out,error}.00xx  where xx are the core (task process) in execution (:from np)
+    cp ${WRF_PATH}/run/rsl.{out,error}.0??? ${DIR_WRF_OUTPUT}/real.rsl.{out,error}.0??? 2>/dev/null    
+   
+ 
+    ### START TESTING the output of real
+    if [ ! -e ${WRF_PATH}/run/rsl.out.0000 ]; then
+      shutdown_execution "ERROR in (mpirun -np ${NUM_PROC} ${WRF_PATH}/run/real.exe): file ${WRF_PATH}/run/rsl.out.0000 not found. Exiting ..."  1
+    fi    
+
+    #  real_em: SUCCESS COMPLETE REAL_EM INIT
+    grep -i "SUCCESS COMPLETE REAL_EM INIT" ${WRF_PATH}/run/rsl.out.0000
+    if [ $? -ne 0 ]; then
+        shutdown_execution "ERROR in (mpirun -np ${NUM_PROC} ${WRF_PATH}/run/real.exe). Exiting ..." 1
+    fi
+
+    # Check the output file (wrfinput_d01: single time level data at model's start time)
+    if [ -e  ${WRF_PATH}/run/wrfinput_d01 ] && [ -e  ${WRF_PATH}/run/wrfbdy_d01 ]; then  
+        
+        
+    
+        # Number of output Times for lateral boundary output
+        #           Times - 1
+        NUM_OUTPUT_TIMES=$(( $RUN_TIME_HOURS / $GLOBAL_DATE_TIME_INTERVAL ))
+        # Check the number of TISTART_MONTH present in each output file. 
+        # TODO TODO Not satisfatory. TO REVIEW.
+        NUM_TIMES=$(ncdump -v Times ${WRF_PATH}/run/wrfbdy_d01 | grep Time | head -n 1 | cut -d '(' -f2 | cut -d ' ' -f 1)
+    #   ncdump -v Times wrfbdy_d01 | grep Time | head -n 1
+    #	Time = UNLIMITED ; // (4 currently)
+    #   ncdump -v Times wrfinput_d01 | grep Time | head -n 1
+    #	Time = UNLIMITED ; // (1 currently)
+    #   Time = UNLIMITED ; // (4 currently)
+    # variables:
+    # char Times(Time, DateStrLen) ;
+    # Times =
+    #  "2021-09-30_00:00:00",
+    #  "2021-09-30_06:00:00",
+    #  "2021-09-30_12:00:00",
+    #  "2021-09-30_18:00:00" ;
+        if [ $NUM_TIMES -ne $NUM_OUTPUT_TIMES ]; then
+                shutdown_execution "ERROR in (mpirun -np $NUM_PROC ${WRF_PATH}/run/real.exe): number of times($NUM_TIMES) in wrfbdy_d01 are different from number of output times ($NUM_OUTPUT_TIMES). Exiting ..."  1
+        fi
+    else
+        shutdown_execution "ERROR: Problem in execution of real.exe. Exiting ..." 1
+    fi
+
+    ### FINISH TESTING the output of real
+    
+
+    
+    mensagem "<<<<<<<<  Running:(mpirun -np $NUM_PROC ${WRF_PATH}/run/real.exe) --- ENDING"
+    
+    
+    cp ${WRF_PATH}/run/wrfinput_d0? ${DIR_WRF_OUTPUT} 2>/dev/null
+    cp ${WRF_PATH}/run/wrfbdy_d01 ${DIR_WRF_OUTPUT} 2>/dev/null
+    
+    # Only adjusts SUCCESS to REAL if there were no ERROR
+    sed -i /REAL/s/1/0/ ${DIR_WRF_OUTPUT}/status-components-out-execution.log
+    
+    mensagem "<<<<<<< Program real.exe (ENDING)"
 fi
 
-sed -i /REAL/s/1/0/ $DIR_SAIDA_WRF/status-components-out-execution.log
 
-###TODO
+
+###TODO TODO TODO TODO
 # Em 20210826: outros testes a serem inclusos
 #    Namelist options are written to a separate file, “namelist.output.”
 #    Check the output times written to the wrfout* file by using the netCDF command:
 #    ncdump –v Times wrfout_d01_yyyy-mm-dd_hh:00:00
 
 
+# ========================================================
+#  WRF -> wrf.exe   Integration (forecast)
+#     Configuration: WRF/run/namelist.input
+#     Input data (files): wrfinput_d0?  wrfbdy_d0? >
+#     Output data (files): wrfout_d01_yyyy-mm-dd_hh:00:00
+# ========================================================
 
-# Em 19jul10: geração do arquivo wrf.print.out que conterá o namelist
-#             e o resultado da rodada do modelo (wrf.exe)
-cat $WRF_PATH/test/em_real/namelist.input > $WRF_PATH/run/wrf.print.out
+status=$(cat ${DIR_WRF_OUTPUT}/status-components-out-execution.log | grep -i "WRF" | cut -d' ' -f2)
+if [ ${status} -ne 0 ]; then
 
-status=$(cat $DIR_SAIDA_WRF/status-components-out-execution.log | grep -i "WRF" | cut -d' ' -f2)
-if [ $status -ne 0 ]; then
-    cd $WRF_PATH/run
+    mensagem ">>>>>>> Program wrf.exe (STARTING)"
 
-    echo -e "\n\n ... EXECUTANDO o programa de integracao numerica -> wrf.exe ...."
+    # DIR of working WRF
+    cd ${WRF_PATH}/run
 
-    # Em 6out21: nao e gerada saia que possa ser capturada
+    # Remove old stuff
+    rm -f ${WRF_PATH}/run/rsl.{out,error}.0??? 2>/dev/null
+    # Remove OUTPUT data from wrf.exe
+    # TODO TODO today are more output files, mainly from diags and afwa diags
+    rm -f ${WRF_PATH}/run/wrfout_d?? 2>/dev/null
+
+     
+    [[ -e ${WRF_PATH}/run/wrfinput_d01 ]] ||  shutdown_execution "ERROR. Input file (${WRF_PATH}/test/em_real/wrfinput_d01) not found. Exiting ..." 1      
+    [[ -e ${WRF_PATH}/run/wrfbdy_d01 ]] ||  shutdown_execution "ERROR. Input file (${WRF_PATH}/test/em_real/wrfbdy_d01) not found. Exiting ..." 1
+          
+
     
-    # Em 6out2021: opcao para o mpiexec
-    # Opcao usada por Cleber: mpiexec --use-hwthread-cpus -np 12 /.../wrf.exe
-    # mpirun (Open MPI): -use-hwthread-cpus, --use-hwthread-cpus: Use hardware threads as independent cpus.
-    # mpirun: /usr/bin/mpirun.openmpi /usr/bin/mpirun /home/cirrus/bin/lib/mpich/bin/mpirun
-    # mpiexec: /usr/bin/mpiexec /usr/bin/mpiexec.openmpi /home/cirrus/bin/lib/mpich/bin/mpiexec /home/cirrus/bin/lib/mpich/bin/mpiexec.hydra
-
-    # /usr/bin/mpiexec -> /etc/alternatives/mpiexec*
-    # /usr/bin/mpirun -> /etc/alternatives/mpirun*
+    mpirun -v --map-by core $WRF_PARAM_FOR_MPI_1 -np ${NUM_PROC} ./wrf.exe
     
-    # /etc/alternatives/mpiexec -> /usr/bin/mpiexec.openmpi*
-    # /etc/alternatives/mpirun -> /usr/bin/mpirun.openmpi*
+    TEMPO_TOTAL=$(cat rsl.out.0000 | grep "Timing for main" | awk '{ SUM += $9} END { print SUM }')
 
-    # /usr/bin/mpirun.openmpi -> orterun*
-    # /usr/bin/mpiexec.openmpi -> orterun*
+    ## DEBUG
+    # f_debug $0 "TEMPO DE INTEGRACAO (s)" $TEMPO
+    f_debug $0 "TEMPO TOTAL (s)" $TEMPO_TOTAL    
     
-    # Opcao anterior
-    # TEMPO=`( time ./wrf.exe >> wrf.print.$DATA$HORA_INICIAL.out 2>&1 ) 2>&1`
-    # Em 6out2021: nova opcao para execucao
-    TEMPO=$(time mpirun $OPCAO_1 -np $NUM_PROC ./wrf.exe)
+    echo -e "Total time of wrf.exe execution (seconds) \n" >> ${DIR_DATA_OUTPUT}/wrf-executions.log
+
+
+    # First, backup the LOG and INPUT files (from real.exe) to the WRF output dir    
+    # rsl.{out,error}.00xx  where xx are the core (task process) in execution (:from np)
+    cp ${WRF_PATH}/run/rsl.{out,error}.0??? ${DIR_WRF_OUTPUT} 2>/dev/null
+    cp ${WRF_PATH}/run/wrfinput_d0? ${DIR_WRF_OUTPUT} 2>/dev/null
+    cp ${WRF_PATH}/run/wrfbdy_d01 ${DIR_WRF_OUTPUT} 2>/dev/null    
     
-    TEMPO_TOTAL=$(cat rsl.out.0000 | grep "Timing for main" | awk '{ SUM += $9} END { print "Total Time WRF: " SUM }')
-
-    echo -e "\n\n TEMPO DE INTEGRACAO: $TEMPO / $TEMPO_TOTAL (s)" >> wrf.print.out
-
-    echo -e "\n Terminou de rodar o WRF (wrf.exe). Verificando se arquivos de saida foram criados."
-
-
-    if [ -e wrfout_d01_$INICIO_ANO-$INICIO_MES-$INICIO_DIA'_'$INICIO_HORA:00:00 ] || [ -e wrfout_d02_$INICIO_ANO-$INICIO_MES-$INICIO_DIA'_'$INICIO_HORA:00:00 ] || [ -e wrfout_d03_$INICIO_ANO-$INICIO_MES-$INICIO_DIA'_'$INICIO_HORA:00:00 ]; then
-        echo -e "\n\n  WRF OK -> Vamos para o ARWpost (pos-processamento) \n"
-    else
-        echo -e "\nERRO   Problema na execucao do wrf.exe. Saindo ...   ERRO"
-        exit 1
+    ### START TESTING the output of wrf
+    if [ ! -e ${WRF_PATH}/run/rsl.out.0000 ]; then
+      shutdown_execution "ERROR in (mpirun -v --map-by core  $WRF_PARAM_FOR_MPI_1 -np ${NUM_PROC} ./wrf.exe): file rsl.out.0000 not found. Exiting ..."  1
+    fi        
+    
+    #  wrf.exe: SUCCESS COMPLETE WRF
+    grep -i "SUCCESS COMPLETE WRF" ${WRF_PATH}/run/rsl.out.0000
+    if [ $? -ne 0 ]; then
+        shutdown_execution "ERROR in (mpirun -v --map-by core $WRF_PARAM_FOR_MPI_1 -np ${NUM_PROC} ./wrf.exe). Exiting ..." 1
+    fi    
+    
+    [[ -e wrfout_d01_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}:00:00 ]] ||  shutdown_execution "ERROR in (mpirun -v --map-by core $WRF_PARAM_FOR_MPI_1 -np ${NUM_PROC} ./wrf.exe). Output file (${WRF_PATH}/run/wrfout_d01_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}:00:00) not created. Exiting ..." 1
+    
+    if [ $_MAX_DOMAIN -eq 2 ]; then
+        [[ -e wrfout_d02_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}:00:00 ]] || shutdown_execution "ERROR in (mpirun -v --map-by core $WRF_PARAM_FOR_MPI_1 -np ${NUM_PROC} ./wrf.exe). Output file (${WRF_PATH}/run/wrfout_d02_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}:00:00) not created. Exiting ..." 1
     fi
-    cp wrf.print.out $DIR_SAIDA_WRF/wrf.print.$DATA$HORA_INICIAL.out
-    mv $WRF_PATH/run/wrfout_d0[1-3]*  $DIR_SAIDA_WRF
+
+    if [ $_MAX_DOMAIN -eq 3 ]; then
+        [[ -e wrfout_d03_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}:00:00 ]] ||  shutdown_execution "ERROR in (mpirun -v --map-by core $WRF_PARAM_FOR_MPI_1 -np ${NUM_PROC} ./wrf.exe). Output file (${WRF_PATH}/run/wrfout_d02_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}:00:00) not created. Exiting ..." 1
+    fi
+    
+    
+    ### FINISH TESTING the output of wrf   
+
+    # WRF run with sucess and the output files were created. Then
+    #    backup (MOVE) the files to the WRF output dir
+    mv ${WRF_PATH}/run/wrfout_d0[1-3]*  ${DIR_WRF_OUTPUT} 2>/dev/null
+    
+    mv ${WRF_PATH}/run/WRF-out-diagnostics_PLEVELS_domain_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}.grb ${DIR_WRF_OUTPUT} 2>/dev/null
+    mv ${WRF_PATH}/run/WRF-out-diagnostics_ZLEVELS_domain_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}.grb ${DIR_WRF_OUTPUT} 2>/dev/null
+    mv ${WRF_PATH}/run/radar_domain.${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR} ${DIR_WRF_OUTPUT}.grb 2>/dev/null
+    
+    # Only adjusts SUCCESS to WRF if there were no ERROR
+    sed -i /WRF/s/1/0/ ${DIR_WRF_OUTPUT}/status-components-out-execution.log    
+    
+    mensagem "<<<<<<< Program wrf.exe (ENDING)"
 fi
 
-sed -i /WRF/s/1/0/ $DIR_SAIDA_WRF/status-components-out-execution.log
+
 
 
 ###########################################################
 ###########################################################
-#                  PÓS-PROCESSAMENTO
+#                   POST-PROCESSING
+# 20220213: now we put the ARWpost processing in another 
+#           script, because the differente domains could requer
+#           some specific output data.
+
 #                        ARWpost
-# Valores passados como parâmetros:
-# 1: Caminho dos dados  2:Número do domínio 3:Tipo de nível de saída
-# Para o terceiro parâmetro:
-# 0:níveis do modelo (sigma) 1:níveis de pressão  2:níveis em altura
+
+
 ###########################################################
 ###########################################################
-status=`cat $DIR_SAIDA_WRF/status-components-out-execution.log | grep -i "ARWPOST" | cut -d' ' -f2`
+
+
+
+# ========================================================
+#  ARWpost -> bin/ARWpost/ARWpost.exe
+#   Convert WRF out files (wrfout_d0?), from NetCDF format, to
+#     GrADS format (files .ctl and .dat)
+#   Configuration: bin/ARWpost/namelist.ARWpost
+#     Input data (files): wrfout_d01_yyyy-mm-dd_hh:00:00
+#     Output (files): wrfout_d01_yyyy-mm-dd_hh.ctl and the corresponding
+#                     wrfout_d01_yyyy-mm-dd_hh.dat  
+# ========================================================
+
+
+status=$(cat ${DIR_WRF_OUTPUT}/status-components-out-execution.log | grep -i "ARWPOST" | cut -d' ' -f2)
 if [ $status -ne 0 ]; then
+
+    mensagem ">>>>>>> Program ARWpost.exe (STARTING)"
+
     cd $BIN_PATH/ARWpost
+    
     # Apagar o arquivo (link) namelist.ARWpost anterior
     if [ -e namelist.ARWpost ]; then
           rm -f namelist.ARWpost
     fi
-    cp $DIR_CORRENTE/wrf/namelist.ARWpost.sh .
-    chmod u+x namelist.ARWpost.sh
-    cp $DIR_CORRENTE/wrf/arwpost_fields_file.txt .
-    # Domínio UM
-    echo "ARWpost para o dominio 1"
-    ./namelist.ARWpost.sh $DIR_SAIDA_WRF 1 0
-    ./ARWpost.exe >& ARWpost-dominio1_sig-$DATA$HORA_INICIAL.log
-    cp ARWpost-dominio1_sig-$DATA$HORA_INICIAL.log $DIR_SAIDA_WRF
-    cat ARWpost-dominio1_sig-$DATA$HORA_INICIAL.log | grep -i "Successful completion of ARWpost"
-    retorno=`echo $?`
-    if test $retorno -ne 0 ; then
-        echo -e "\nERRO Problema na execucao do ARWpost.exe (Dominio UM - SIGMA). Saindo ...ERRO"
-        exit 1
-    fi
-# Em 21jul10: Esta saída será em PRESSAO
-#          e somente será gerada para este domínio, pois
-#          a ideia precipua é o uso para o trabalho de pesquisa CAP.
-      ./namelist.ARWpost.sh $DIR_SAIDA_WRF 1 1 
-      ./ARWpost.exe >& ARWpost-dominio1_pres-$DATA$HORA_INICIAL.log
-      cp ARWpost-dominio1_pres-$DATA$HORA_INICIAL.log $DIR_SAIDA_WRF
-      cat ARWpost-dominio1_pres-$DATA$HORA_INICIAL.log | grep -i "Successful completion of ARWpost"
-      retorno=`echo $?`
-      if test $retorno -ne 0 ; then
-        echo -e "\nERRO Problema na execucao do ARWpost.exe (Dominio UM - PRESSAO) . Saindo ...ERRO"
-        exit 1
-      fi
+    cp $CURRENT_DIR/post_processing/namelist.ARWpost.sh $BIN_PATH/ARWpost
+    cp $CURRENT_DIR/post_processing/process_arwpost.sh $BIN_PATH/ARWpost
+    chmod u+x namelist.ARWpost.sh process_arwpost.sh
+    
+    # Not absolutelly necesssary.
+    cp $CURRENT_DIR/post_processing/arwpost_fields_file.txt $BIN_PATH/ARWpost
+    
+    #  20220212: parameters to the script
+    #    $1: domain configuration: A | B | C ...
+    #    $2: path for ARWpost binary (default: $HOME/bin/ARWpost
+    #    $3: path for the output of the dat and ctl files (DIR_WRF_OUTPUT)
+    #    $4: date-time of start of simulation: 2021-12-01-00 (00UTC)
+    #    $5: date-time of ending of simulation (final date-time): 2021-12-02-00
+    ./process_arwpost.sh $CONFIG "${BIN_PATH}/ARWpost" $DIR_WRF_OUTPUT  ${START_YEAR}-${START_MONTH}-${START_DAY}-${START_HOUR}  ${END_YEAR}-${END_MONTH}-${END_DAY}-${END_HOUR}
+    # First, save the status of execution, and,
+    status=$?
 
-#######################
-### DOMINIO DOIS  #####
-#######################
-    if [ $CONFIG = 'A' ] || [ $CONFIG = 'J' ] || [ $CONFIG = 'L' ]; then
-      # Domínio DOIS
-      echo "ARWpost para o dominio 2"
-      ./namelist.ARWpost.sh $DIR_SAIDA_WRF 2 0
-      ./ARWpost.exe >& ARWpost-dominio2_sig-$DATA$HORA_INICIAL.log
-      cp ARWpost-dominio2_sig-$DATA$HORA_INICIAL.log $DIR_SAIDA_WRF
-      cat ARWpost-dominio2_sig-$DATA$HORA_INICIAL.log | grep -i "Successful completion of ARWpost"
-      retorno=`echo $?`
-      if test $retorno -ne 0 ; then
-        echo -e "\nERRO Problema na execucao do ARWpost.exe (Dominio DOIS - SIGMA) . Saindo ...ERRO"
-        exit 1
-      fi
-# Em 21jul10: Esta saída será em PRESSÃO
-#          e somente será gerada para este domínio, pois
-#          a ideia precipua é o uso para o trabalho de pesquisa CAP.
-      ./namelist.ARWpost.sh $DIR_SAIDA_WRF 2 1
-      ./ARWpost.exe >& ARWpost-dominio2_pres-$DATA$HORA_INICIAL.log
-      cp ARWpost-dominio2_pres-$DATA$HORA_INICIAL.log $DIR_SAIDA_WRF
-      cat ARWpost-dominio2_pres-$DATA$HORA_INICIAL.log | grep -i "Successful completion of ARWpost"
-      retorno=`echo $?`
-      if test $retorno -ne 0 ; then
-        echo -e "\nERRO Problema na execucao do ARWpost.exe (Dominio DOIS - PRESSAO) . Saindo ...ERRO"
-        exit 1
-      fi
-    fi
-
-#######################
-### DOMINIO TRES  #####
-#######################
-    if [ $CONFIG = 'A' ]; then
-      # Domínio TRES
-      echo "ARWpost para o dominio 3"
-      ./namelist.ARWpost.sh $DIR_SAIDA_WRF 3 0
-      ./ARWpost.exe >& ARWpost-dominio3_sig-$DATA$HORA_INICIAL.log
-      cp ARWpost-dominio3_sig-$DATA$HORA_INICIAL.log $DIR_SAIDA_WRF
-      cat ARWpost-dominio3_sig-$DATA$HORA_INICIAL.log | grep -i "Successful completion of ARWpost"
-      retorno=`echo $?`
-      if test $retorno -ne 0 ; then
-        echo -e "\nERRO Problema na execucao do ARWpost.exe (Dominio TRES - SIGMA) . Saindo ...ERRO"
-        exit 1
-      fi
-# Em 21jul10: Esta saída será em ALTURA (metros, ou km)
-#          e somente será gerada para este domínio, pois
-#          a ideia precipua é o uso para o trabalho de pesquisa CAP.
-      ./namelist.ARWpost.sh $DIR_SAIDA_WRF 3 2
-      ./ARWpost.exe >& ARWpost-dominio3_alt-$DATA$HORA_INICIAL.log
-      cp ARWpost-dominio3_alt-$DATA$HORA_INICIAL.log $DIR_SAIDA_WRF
-      cat ARWpost-dominio3_alt-$DATA$HORA_INICIAL.log | grep -i "Successful completion of ARWpost"
-      retorno=`echo $?`
-      if test $retorno -ne 0 ; then
-        echo -e "\nERRO Problema na execucao do ARWpost.exe (Dominio TRES - ALTURA) . Saindo ...ERRO"
-        exit 1
-      fi
-
-    fi
-
-
+    # Backup the log file to the WRF output dir
+    #cp ${WRF_PATH}/test/em_real/namelist.input ${DIR_WRF_OUTPUT}  2>/dev/null
+    
+    
+    # Next, verify the output from status
+    [[ $status -ne 0 ]] && shutdown_execution  "ERROR: problem in (./process_arwpost.sh $CONFIG "${BIN_PATH}/ARWpost" $DIR_WRF_OUTPUT  ${START_YEAR}-${START_MONTH}-${START_DAY}-${START_HOUR}  ${END_YEAR}-${END_MONTH}-${END_DAY}-${END_HOUR}). Exiting."  1
+    
+    mensagem "<<<<<<< Program ARWpost.exe (ENDING)"
+   
 fi
-sed -i /ARWPOST/s/1/0/ $DIR_SAIDA_WRF/status-components-out-execution.log
 
 
-###########################################################
-###########################################################
-#               GERAÇÃO DOS GRÁFICOS DE SAÍDA 
-#                        GRADS
-###########################################################
-###########################################################
-status=`cat $DIR_SAIDA_WRF/status-components-out-execution.log | grep -i "GRADS" | cut -d' ' -f2`
-      if [ $status -ne 0 ]; then
-      # Parâmetros: $1:Diretório saída dados      $2: Configuração corrente
-	  # Em 18mar13: variavel abaixo usada para verificar o resultado das operacoes GrAds
-	  GRADES_RESULTADO=0
 
-      cp $DIR_CORRENTE/wrf/geracao_saidas_graficas.sh $DIR_SAIDA_WRF
-      cp $DIR_CORRENTE/wrf/grads/plot-*.gs $DIR_SAIDA_WRF
 
-      # Em 18dez13: inclusao da copia dos arquivos cbarn.gs e rgbset.gs considerando a adequacao
-      #             das saidas graficas em funcao do GT de Modelagem Numerica.
-      cp -f $DIR_CORRENTE/grads/cbarn.gs $DIR_CORRENTE/grads/rgbset.gs  $DIR_SAIDA_WRF
+# ========================================================
+#    GrADS
+#   
+#     GrADS format (files .ctl and .dat)
+#     
+#     Input (files): wrfout_d01_yyyy-mm-dd_hh.ctl and the corresponding
+#                     wrfout_d01_yyyy-mm-dd_hh.dat
+#     Output: plots of variables in format png
+# ========================================================
 
-      cd $DIR_SAIDA_WRF
-      chmod u+x geracao_saidas_graficas.sh
-      ./geracao_saidas_graficas.sh $DIR_SAIDA_WRF  $CONFIG $MKX lambert
+
+status=$(cat ${DIR_WRF_OUTPUT}/status-components-out-execution.log | grep -i "GRADS" | cut -d' ' -f2)
+    if [ $status -ne 0 ]; then
+    # Parâmetros: $1:Diretório saída dados      $2: Configuração corrente
+    # Em 18mar13: variavel abaixo usada para verificar o resultado das operacoes GrAds
+    GRADES_RESULTADO=0
+
+    cp $CURRENT_DIR/post_processing/generate_output_graphics.sh $DIR_WRF_OUTPUT
+    cp $CURRENT_DIR/post_processing/grads/plot-sigma-wrf.gs $DIR_WRF_OUTPUT 2>/dev/null
+    cp $CURRENT_DIR/post_processing/grads/plot-pressao-wrf.gs $DIR_WRF_OUTPUT 2>/dev/null
+    cp $CURRENT_DIR/post_processing/grads/plot.gs $DIR_WRF_OUTPUT 2>/dev/null
+
+    # Em 18dez13: inclusao da copia dos arquivos cbarn.gs e rgbset.gs considerando
+    #    a adequacao  das saidas graficas em funcao do GT de Modelagem Numerica.
+    cp -f ${CURRENT_DIR}/post_processing/grads/cbarn.gs ${CURRENT_DIR}/post_processing/grads/rgbset.gs  $DIR_WRF_OUTPUT
+
+    cd $DIR_WRF_OUTPUT 2> /dev/null
+    [[ $? -ne 0 ]] && exit 1
+    chmod u+x generate_output_graphics.sh
+      
+    ./generate_output_graphics.sh $DIR_WRF_OUTPUT $CONFIG $_E_VERT $_MAP_PROJECTION ${START_YEAR}-${START_MONTH}-${START_DAY}-${START_HOUR}  ${END_YEAR}-${END_MONTH}-${END_DAY}-${END_HOUR}
+    
+    
+    
 	  if test $? -ne 0 ; then
 		GRADS_RESULTADO=1
 	  fi
 	  
 	  # Em 10mai2021: SO ALTERA status processamento, se houve o mesmo
       if [ $GRADES_RESULTADO = '0' ]; then
-          sed -i /GRADS/s/1/0/ $DIR_SAIDA_WRF/status-components-out-execution.log
+          sed -i /GRADS/s/1/0/ ${DIR_WRF_OUTPUT}/status-components-out-execution.log
       fi	  
 	  
     # Em 03jun2011: arquivos gs serão apagados da rodada.
     # Em 10mai2021: SO APAGA se houve processamento na rodada
-    rm -f $DIR_SAIDA_WRF/*.gs 2>/dev/null
+    # rm -f ${DIR_WRF_OUTPUT}/*.gs 2>/dev/null
 fi
 
 
-##################################################################
-#  As plotagens a seguir são para o projeto de pesquisa CAP 2/2010.
-##################################################################
-if [ $CONFIG = 'A' ]; then
-        cd $DIR_SAIDA_WRF
-        cp $DIR_CORRENTE/wrf/grads/plot-sigma-projeto-wrf.gs .
-        OUTFILENAME_SIGMA=wrfout_d03_SIG
-        grads -blc "run plot-sigma-projeto-wrf.gs $OUTFILENAME_SIGMA.ctl"
-        cp vento*.txt $DIR_CORRENTE/projeto
-fi
+
+# ========================================================
+#    Output 
+#   
+#     WRF diagnostics (in PLEVEL and ZLEVEL)
+#     
+#     WRF out radar
+#                  
+#     
+# ========================================================
+
+#   ${DIR_WRF_OUTPUT}/WRF-out-diagnostics_PLEVELS_domain_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}.grb
+#   ${DIR_WRF_OUTPUT}/WRF-out-diagnostics_ZLEVELS_domain_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}.grb
+#   ${DIR_WRF_OUTPUT}/radar_domain.${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR} ${DIR_WRF_OUTPUT}.grb
+
+
 
 
 #########################################
@@ -1432,10 +2347,10 @@ fi
 # 0 = diretório já existe e a rodada foi completada
 # 1 = diretório já existe e a rodada não foi completada com sucesso
 # 2 = diretório não existe ainda
-grep 1$ $DIR_SAIDA_WRF/status-components-out-execution.log
+grep 1$ ${DIR_WRF_OUTPUT}/status-components-out-execution.log
 # $? = 0 foi encontrado um modulo com falha (saida 1)
 if [ $? -eq 0 ]; then
-    echo 1 > $DIR_SAIDA_WRF/status-current-configuration.log
+    echo 1 > ${DIR_WRF_OUTPUT}/status-current-configuration.log
     exit 1
 fi
 

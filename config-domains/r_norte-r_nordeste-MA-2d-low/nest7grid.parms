@@ -1,0 +1,13 @@
+ &lapsparms_nl
+
+ c6_maproj='merctr',
+ standard_latitude=-3.857280000000003,
+ standard_latitude2=0.0,
+ standard_longitude=-46.14671999999999,
+ grid_cen_lat=-2.5,
+ grid_cen_lon=-44.5,
+ grid_spacing_m=36000,
+ NX_L=100,
+ NY_L=80,
+
+ /
