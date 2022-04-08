@@ -16,7 +16,7 @@ Reference: Skamarock, W. C., J. B. Klemp, J. Dudhia, D. O. Gill, Z. Liu, J. Bern
 ## General aspects
 
 Autor: G Camillo
-Last revision: 24 mar. 2022
+Last revision: 08 abr. 2022
 
 ***This Readme and the scripts are in update***
 
@@ -101,7 +101,7 @@ String that contains the letters of all domains configured. If new domain settin
 
 
 
-## How to execute
+# Executing the model
 
 Here the basic execution options will be presented (according to the help of the runwrf.sh script). Details of each option will be presented later.
 
@@ -109,47 +109,68 @@ Here the basic execution options will be presented (according to the help of the
 $ cd $HOME/model-wrf
 ```
 
-# How to call help for command line parameters
+### How to call help for command line parameters
 ```sh
 $ ./runwrf.sh --help
 ```
 
+### How to execute the model from command line
+
+Obs: for now (vide TODO), if you need change physical/dynamic/etc parameters for the WRF, then you need change them in the next one or two files:
+- `wrf-model/runwrf.sh`  and/or
+- `wrf-model/wrf/namelist.input.wrf.sh`
+
+
 Use: `$ ./runwrf.sh parameters options`
 
 * MANDATORY parameters *
- -conf A | B | ... Z : domain configuration
- -ts 2021-06-01-12   : (yyyy-mm-dd-HH) date-time of start data/hora inicial da integração
- -ti 24 | 48 | 72    : (HH) integration time in hours (run time forecast) (default:24h)
+-conf A | B | ... Z : domain configuration
+
+-ts 2021-06-01-12   : (yyyy-mm-dd-HH) date-time of start data/hora inicial da integração
+
+-ti 24 | 48 | 72    : (HH) integration time in hours (run time forecast) (default:24h)
 
 * OPTIONAL parameters *
- -tiout 3 | 6        : (H) time interval of output (default:3h)
+-tiout 3 | 6        : (H) time interval of output (default:3h)
+
  -gd gfs1p00 | gfs0p50 | gfs0p25 | cptec_wrf_5km :global data NCEP-GFS (1|0.5|0.25 degree - default:gfs1p00) OR WRF from CPTEC (5km)
+ 
  -gti 1 | 3 | 6      : (H) time interval (hours) of global input data (time resolution): 1 for cptec_wrf_5km and 3/6 for gfs (defaults are: 1h for cptec_wrf_5km and 3h for gfs)
 
  -np 1              :  number of processes to be use: (default=1)
+ 
  --wrf-time-step 20 :  value (in s) of WRF time step (default:each configuration has been defined with some default time step)
 
 * OPTIONS *
  [--use-hwthread-cpus ]     : use hardware threads as independent cpus
          Default: empty (no use)
+         
  [--use-generated-geogrid ] : use file(s) geo_em.d01,2,3 to the program WPS geogrid.exe. They must be generated previously and available in this directory: `model-wrf/config-domains/'NAME_OF_DOMAIN'/`
+ 
 For each domain/nest there is a file: domain 1 (geo_em.d01), domain 2 (geo_em.d02), domain 3 (geo_em.d03). In the end, depends on how many nests are configured in each domain configuration.
-         **Important** The default is the program `bin/WPS/geogrid.exe` generate the model terrestrial domains (geo_em).
+**Important** The default is the program `bin/WPS/geogrid.exe` generate the model terrestrial domains (geo_em).
+
  [--use-static-config ]     : the script will use the namelist files in their directories. Only need provide the mandatory parameters to verify DIR and INPUT DATA
          Default: use dynamic generation of the namelist files.
  
- 
 Observations:
   a) The parameter `tiout` is for the coarse domain (domain 1). The domain 2 and 3 (if configured) will output data in time interval of 1 hour
+  
   b) There are no guarantee that using virtual processors (hyperthreading) will upgrade performance. Recommendation is one process per core.
 
 * EXAMPLE *
 `./runwrf.sh -conf G -ts 2022-01-01-12 -ti 24 -gti 3 -np 4 -gd gfs0p50 --use-generated-geogrid`
+
 Configuration G: r_sudeste-SP-MG-PR-MS-2d
+
 Start of simulation: 2022, 1st january at 12 UTC
+
 Time of forecast: 24 hours
+
 Time step of global data: 3 hours
+
 Type and resolution of global data: GFS from NCEP - 0.5 degrees
+
 Use domain configuration (physical) from geogrid.exe
 
    
@@ -197,14 +218,13 @@ Dependencies for domain configuration:
 - post_processing/generate_output_graphics.sh
 
 
-
 All execution configurations have a set of parameters defined in the the next two files:
-WPS: `bin/WPS/namelist.wps`  (WPS-n)
->>>> `WRF: bin/WRF/namelist.input` (WRF-n)
+- WPS: `bin/WPS/namelist.wps`  (WPS-n)
+- WRF: `WRF: bin/WRF/namelist.input` (WRF-n)
 
 The next two scripts will generate the output namelist files above:
-WPS: `model-wrf/wps/namelist.wps.sh`  (WPS-s)
-WRF: `model-wrf/wrf/namelist.input.wrf.sh` (WRF-s)
+- WPS: `model-wrf/wps/namelist.wps.sh`  (WPS-s)
+- WRF: `model-wrf/wrf/namelist.input.wrf.sh` (WRF-s)
 
 Then, if you need alter some parameter to specify an execution, there are two options:
 a) You can alter the configuration file that contains some parametrized variables to adjust the namelist. This is a text file that allow you to modify the `Microphysics parametrization` (MP_PHYSICS), for example.
@@ -212,9 +232,7 @@ b) If you need modify other parameters, then I sugest include the modifications 
   
  
 
-
-
-## Global Data
+# Global Data
 
 Global meteorological data is required for initialization and to ateral and boundary conditions (LBC). The LBC data available by global models have a temporal resolution, that is, the time interval between predictions.
 
@@ -225,7 +243,7 @@ b) the configuration and simulation needs.
 [Meteorological Data for WRF](https://www2.mmm.ucar.edu/wrf/users/download/free_data.html)
 
 
-# NCEP: GFS model
+## NCEP: GFS model
 Obs.: some changes occured at March, 22 (2021).
 
 [GFS information] (https://www.nco.ncep.noaa.gov/pmb/products/gfs/)
@@ -249,7 +267,7 @@ Data available on this site (example for this initialization date-time: 2022-03-
 
 Directory default name for GFS data from NCEP: `DIR_WPS_INPUT=$DIR_DATA_INPUT/yyyy-mm-dd-HH-gfs`
 
-# CPTEC: WRF model
+## CPTEC: WRF model
 
 There is the possibility of use Initial and LBC (Lateral and Boundary Conditions) from [CPTEC] (https://www.cptec.inpe.br/) that run some met and climate models.
 One of that is the output from WRF that is available to input in our model. 
@@ -258,7 +276,7 @@ Directory default name for WRF data from CPTEC: `DIR_WPS_INPUT=$DIR_DATA_INPUT/y
 
 
 
-## TODO
+# TODO
   a) Continuous review this script and the others for readability, security, and resilience (where possible).
 
   b) Check disk available space before running.
@@ -271,7 +289,7 @@ Directory default name for WRF data from CPTEC: `DIR_WPS_INPUT=$DIR_DATA_INPUT/y
   
   f) Upgrade and improve the graphics plots.
   
-  g) Take out the data (options) of the configuration domains in a text file. This will be the configuration file that USER can EDIT and MODIFY.
+  g) Take out the data (options/parameters) of the configuration domains in a text file. This will be the configuration file that USER can EDIT and MODIFY.
   
   
   
@@ -324,7 +342,7 @@ d2:64x49       6km
 
 
 
-# Meta
+### Meta
 I need to express my gratitude for those who embraced the idea of open source and voluntarily shared their knowledge. For this work, especially:
 - People who are involved in the world of the WRF model; and,
 - Aurélio[1] and Julio Cezar[2]: for their contribution to making Scripting Bash accessible (books: [3][4]). I know I need to improve my codes, but with your help, that's going to be possible.
