@@ -225,7 +225,7 @@ END_HOUR=$START_HOUR
 
 if [ ${GD_SOURCE} = "cptec_wrf_5km" ]; then
 
-    F_MIN_LENGTH_GD_00=260000 # 261M
+    F_MIN_LENGTH_GD_00=250000 # 261M
     F_MIN_LENGTH_GD=320000    # 340M,380M,395M,409M(2d),412M(3d)
 
     # (LAST_FILE_COPIED=0 sucessfully download of last forecast file 
