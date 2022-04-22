@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 #  Encoding UTF-8
-#  Last revision: 2022-03-07
+#  Last revision: 2022-04-22
 #  
 #  wps/executes_ungrib.sh: set variables to the wps/link_grib.csh and
 #              calls the program WPS/ungrib.exe
@@ -12,6 +12,11 @@
 #  $2 : date-time of start of simulation: 2021-12-01-00 (00UTC)
 #  $3 : time of initialization: 00 06 12 18
 #  $4 : gfs1p00 gfs0p50 gfs0p25 cptec_wrf_5km
+
+
+# 2022-04-22  Inclusion of generic source of global atmospheric data. Obs.: Data only in GRIB2 format.
+#             a) Need to create a directory in `DIR_WPS_INPUT=$DIR_DATA_INPUT/yyyy-mm-dd-HH-my-data` and put the files, each for time forecast;
+#             b) Use `--use-alternate-data` as option in command line. The script will ask for the directory above.
 
 ###################################################################
 
@@ -75,7 +80,7 @@ f_debug $0 GD_SOURCE $4
 # Test for correct parameter
 [ -z $4 ] && exit 2
 case $4 in
-    gfs1p00|gfs0p50|gfs0p25|cptec_wrf_5km) GD_SOURCE=$4;;
+    gfs1p00|gfs0p50|gfs0p25|cptec_wrf_5km|grib2) GD_SOURCE=$4;;
     *) exit 2;;
 esac
 
@@ -114,13 +119,20 @@ if [ ${GD_SOURCE} = "gfs0p25" ] || [ ${GD_SOURCE} = "gfs0p50" ] || [ ${GD_SOURCE
     [[ $? -ne 0 ]] && exit 1
 fi
 
-if [ ${GD_SOURCE} = "cptec_wrf_5km" ] ; then
+if [ $GD_SOURCE = "cptec_wrf_5km" ] ; then
 
     ./link_grib.csh ${DIR_WPS_INPUT}/WRF_cpt_05KM_${START_YEAR}${START_MONTH}${START_DAY}${START_HOUR}_*.grib2
 
     [[ $? -ne 0 ]] && exit 1
 fi
 
+
+if [ $GD_SOURCE = "grib2" ] ; then
+
+    ./link_grib.csh ${DIR_WPS_INPUT}/*
+
+    [[ $? -ne 0 ]] && exit 1
+fi
 
 
 #################################################################

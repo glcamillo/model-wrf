@@ -145,10 +145,13 @@ Use: `$ ./runwrf.sh parameters options`
  [--use-hwthread-cpus ]     : use hardware threads as independent cpus
          Default: empty (no use)
          
- [--use-generated-geogrid ] : use file(s) geo_em.d01,2,3 to the program WPS geogrid.exe. They must be generated previously and available in this directory: `model-wrf/config-domains/'NAME_OF_DOMAIN'/`
+ [--use-static-geogrid ] : use file(s) geo_em.d01,2,3 to the program WPS geogrid.exe. They must be generated previously and available in this directory: `model-wrf/config-domains/'NAME_OF_DOMAIN'/`
  
 For each domain/nest there is a file: domain 1 (geo_em.d01), domain 2 (geo_em.d02), domain 3 (geo_em.d03). In the end, depends on how many nests are configured in each domain configuration.
 **Important** The default is the program `bin/WPS/geogrid.exe` generate the model terrestrial domains (geo_em).
+
+
+ [--use-alternate-data ]    : use hardware threads as independent cpus
 
  [--use-static-config ]     : the script will use the namelist files in their directories. Only need provide the mandatory parameters to verify DIR and INPUT DATA
          Default: use dynamic generation of the namelist files.
@@ -274,6 +277,16 @@ One of that is the output from WRF that is available to input in our model.
 
 Directory default name for WRF data from CPTEC: `DIR_WPS_INPUT=$DIR_DATA_INPUT/yyyy-mm-dd-HH-cptec-wrf`
 
+
+## Historical Global Data: GFS model
+
+Inclusion of generic source of global atmospheric data. For example, from ds084.1 (NCEP GFS 0.25 Degree Global Forecast Grids Historical Archive), available at [RDA - ds084.1] (https://rda.ucar.edu/datasets/ds084.1/). Obs.: Data only in GRIB2 format.
+
+To use that files in model:
+
+a) Create a directory in `DIR_WPS_INPUT=$DIR_DATA_INPUT/yyyy-mm-dd-HH-my-data` and put the files, each for time forecast;
+
+b) Use `--use-alternate-data` as option in command line. The script will ask for the directory above.
 
 
 # TODO

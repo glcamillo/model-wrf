@@ -80,20 +80,20 @@ grade         pontos       resol(km)     resol(graus)    resol_dados_geo(graus,m
 d1:370x250    92.500          2         0,0128x0,0128            30s
 
 
+-------------------------------
+
+27S distance between 51W and 52W (km): 99.25463055833688
+27S distance between 51W and 51:30W (km): 49.62741265091879
+27S distance between 51W and 51:30W (km): 24.813718496659174
 
 
 
-
-
-
-
+Geographical distance
 10min:18,4756
 5min:9,23
 2min:3,695
 30s:0,5542
 
-53
-29,45
 
 
 
