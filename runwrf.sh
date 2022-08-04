@@ -1,15 +1,11 @@
 #!/bin/bash
 #
 #  Encoding UTF-8
-#  Last revision: 2022-03-16
+#  Last revision: 2022-07-06
 #  Obs.: these scripts uses features from Bash that are not found in other versions of sh.
 
 
 # runwrf.sh: this is the main script that executes the routines for the WRF model.
-#
-# Use
-
-
 #
 #  Versions and changelogs (more detailed in the Readme.md):
 #    0.1 (2009): this script was aimed to automatize the WRF model routines; this
@@ -23,58 +19,58 @@
 
 #  Command line parameters for script execution (basic info; more in Readme.md)
 #  ./runwrf.sh -conf A -ts 2022-01-01-12 -ti 24 -gtr 3 -np 4 -gd gfs0p50
-#     -conf A : domain configuration A
-#     -ts 2022-01-01-12 : date-time of start of simulation
-#     -ti 24 : integration time in hours (24 hours)
+#    -conf A : domain configuration A
+#    -ts 2022-01-01-12 : date-time of start of simulation
+#    -ti 24 : integration time in hours (24 hours)
 #  OPTIONAL
-# 
-#
-# Or call for help: ./runwrf.sh --help
 #    -tiout 3 | 6 :(H) time interval of output (default:3h) (OPTIONAL)"
 #    -gd gfs1p00 | gfs0p50 | gfs0p25 | cptec_wrf_5km :global data NCEP-GFS (1|0,5|0,25 degree - default:gfs1p00) OR WRF from CPTEC (5km)"
 #    -gti 1 | 3 | 6 :(H) time interval (hours) of global input data (time resolution): 1 for cptec_wrf_5km and 3/6 for gfs (defaults are: 1h for cptec_wrf_5km and 3h for gfs)"
 #    -np 1 :number of processes to be use: (default=1)"
 #    --wrf-time-step 20 :value (in s) of WRF time step (default:each configuration has been defined with s
 
+# Or call for help: ./runwrf.sh --help
 # ----------------------------------------
 
 
-
 # Set debugging messages (variable tracking)
-DEBUG=1 # debug ON
-#DEBUG=0 # debug OFF
+# DEBUG=1 # debug ON
+  DEBUG=0 # debug OFF
 
 
 ## TODO TODO TODO permanente
 #  More in README.md
 
-################################################################################
-################################################################################
+###############################################################
+###############################################################
 #
 #                   Basic and Global DEFINITIONS
 #
-################################################################################
-################################################################################
+###############################################################
+###############################################################
 
 
-# Em 28mar13: ajuste da variável CURRENT_DIR. Se a inicializacao for manual ou
-#             interativa, a variável será ajustada pelo `pwd` durante o processamento.
+# This is the directory from the scripts were called
 CURRENT_DIR=/home/$(id -un)/model-wrf
 
-# 20220307: string that contains the letters of all domains configured
-CONFIG_VALUES="ABCDEFGHIJK"
+# String that contains the letters of all domains configured
+CONFIG_VALUES="ABCDEFGHIJKL"
 declare -u CONFIG="A"  # receives only uppercase letters
-# What depends on this:
+# What scripts epends on this:
 #   model-wrf/post_processing/process_ARWpost.sh
 #   model-wrf/post_processing/generate_output_graphics.sh
 
+# This is for AFWA diagnostics output
+declare -i GEN_WRFOUT_DIAGS_AFWA=1
 
 COMPILADOR=GFORTRAN
 
-# Variavel que vai controlar se todos os parametros (primordiais) foram passados via linha de comando.
-NUM_PARAM=0      # This variable will track the parameters supplied by user
+# This variable will track the parameters supplied by user
+NUM_PARAM=0  
 
-NUM_ARGUMENTOS=3 # MANDATORY parameters: conf ts ti
+# This defines the MANDATORY parameters (number) for calling
+#      this script.
+NUM_ARGUMENTOS=3      # conf ts ti
 # ./runwrf.sh -conf A -ts 2021-06-10-00 -ti 24 -gd gfs0p25 -gtr 6
 # Optional parameters
 # gd: gfs1p00 | gfs0p50 | gfs0p25 | cptec_wrf_5km
@@ -86,7 +82,7 @@ WRF_PARAM_FOR_MPI_1=""   # option to mpirun: --use-hwthread-cpus
 RES_G_NCEP="1p00" # global data: resolution
 RUN_TIME_HOURS=24 # integration time
 
-# Em 02jan22: variable to define where the global met data come from
+# Variable to define where the global met data come from
 #        GFS, CPTEC (from WRF model), etc
 # ATTENTION: this choice is determined by the domain configuration (for best config and results)
 GLOBAL_DATA_SOURCE=gfs
@@ -125,6 +121,10 @@ USE_STATIC_GEOGRID="no"
 # b) Or, the normal execution with parameters defined in command line and in the config files.
 USE_STATIC_NAMELIST_FILES="no"   # Default
 
+# -------- 
+
+
+
 #  ------- Setting to enable manual or automatic (via cron) execution
 
 # Para rodar via cron ajustar manualmente o diretório CURRENT_DIR no início do
@@ -139,13 +139,13 @@ DH_HOW_RUN_SCRIPT=INTERACTIVE
 
 
 
-################################################################################
-################################################################################
+#############################################################
+#############################################################
 #
 #                  General Functions
 #
-################################################################################
-################################################################################
+#############################################################
+#############################################################
 
 
 # Show debug messages for depuration
@@ -479,12 +479,11 @@ case $CONFIG in
         export  _FEEDBACK=1 # 0 one-way no feedback    1 two-way w/ feedbak (default)
         export  _SMOOTH=2   # Default=2
         
-        export _MP_PHYSICS_1=3; export _MP_PHYSICS_2=3;  export _MP_PHYSICS_3=3
+        export _MP_PHYSICS_1=5; export _MP_PHYSICS_2=5;  export _MP_PHYSICS_3=5
         export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
-        export _CU_PHYSICS_1=1; _CU_PHYSICS_2=1; _CU_PHYSICS_3=0;
-
+        export _CU_PHYSICS_1=16; _CU_PHYSICS_2=16; _CU_PHYSICS_3=0;
         
-        export _E_VERT=35  # Number o vertical levels. The levels are
+        export _E_VERT=42  # Number o vertical levels. The levels are
                            #   automatically calculated (auto_levels_opt=2)
                            #   stretching in lower and in top of the atmosphere.   
 
@@ -540,12 +539,11 @@ case $CONFIG in
         export  _FEEDBACK=1 # 0 one-way no feedback    1 two-way w/ feedbak (default)
         export  _SMOOTH=2   # Default=2
         
-        export _MP_PHYSICS_1=3; export _MP_PHYSICS_2=3;  export _MP_PHYSICS_3=3
+        export _MP_PHYSICS_1=5; export _MP_PHYSICS_2=5;  export _MP_PHYSICS_3=5
         export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
-        export _CU_PHYSICS_1=1; _CU_PHYSICS_2=1; _CU_PHYSICS_3=0;
-
+        export _CU_PHYSICS_1=16; _CU_PHYSICS_2=16; _CU_PHYSICS_3=0;
         
-        export _E_VERT=35  # Number o vertical levels. The levels are
+        export _E_VERT=42  # Number o vertical levels. The levels are
                            #   automatically calculated (auto_levels_opt=2)
                            #   stretching in lower and in top of the atmosphere.    
        
@@ -604,12 +602,12 @@ case $CONFIG in
         export  _FEEDBACK=1 # 0 one-way no feedback    1 two-way w/ feedbak (default)
         export  _SMOOTH=2   # Default=2
         
-        export _MP_PHYSICS_1=3; export _MP_PHYSICS_2=3;  export _MP_PHYSICS_3=3
+        export _MP_PHYSICS_1=5; export _MP_PHYSICS_2=5;  export _MP_PHYSICS_3=5
         export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
-        export _CU_PHYSICS_1=1; _CU_PHYSICS_2=1; _CU_PHYSICS_3=0;
+        export _CU_PHYSICS_1=16; _CU_PHYSICS_2=0; _CU_PHYSICS_3=0;
 
         
-        export _E_VERT=35  # Number o vertical levels. The levels are
+        export _E_VERT=42  # Number o vertical levels. The levels are
                            #   automatically calculated (auto_levels_opt=2)
                            #   stretching in lower and in top of the atmosphere.   
 
@@ -631,8 +629,7 @@ case $CONFIG in
         fi
         export _T_INTERVAL_OUTPUT_2=60  ## interval time: 1 h for DOMAIN 2
         export _T_INTERVAL_OUTPUT_3=60  ## interval time: 1 h for DOMAIN 3
-
-        
+  
         
         export _PARENT_ID_2=1;  export _PARENT_ID_3=""
         export _I_PARENT_START_2=107 ; export _I_PARENT_START_3=""
@@ -667,13 +664,11 @@ case $CONFIG in
         export  _FEEDBACK=1 # 0 one-way no feedback    1 two-way w/ feedbak (default)
         export  _SMOOTH=2   # Default=2
         
-        export _MP_PHYSICS_1=3; export _MP_PHYSICS_2=3;  export _MP_PHYSICS_3=3
-        export _BL_PBL_PHYSICS
-        _1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
-        export _CU_PHYSICS_1=1; _CU_PHYSICS_2=1; _CU_PHYSICS_3=0;
-
+        export _MP_PHYSICS_1=5; export _MP_PHYSICS_2=5;  export _MP_PHYSICS_3=5
+        export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
+        export _CU_PHYSICS_1=0; _CU_PHYSICS_2=0; _CU_PHYSICS_3=0
         
-        export _E_VERT=35  # Number o vertical levels. The levels are
+        export _E_VERT=42  # Number o vertical levels. The levels are
                            #   automatically calculated (auto_levels_opt=2)
                            #   stretching in lower and in top of the atmosphere.    
 
@@ -731,13 +726,12 @@ case $CONFIG in
         export  _FEEDBACK=1 # 0 one-way no feedback    1 two-way w/ feedbak (default)
         export  _SMOOTH=2   # Default=2
         
-        export _MP_PHYSICS_1=3; export _MP_PHYSICS_2=3;  export _MP_PHYSICS_3=3
-        export _BL_PBL_PHYSICS
-        _1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
-        export _CU_PHYSICS_1=1; _CU_PHYSICS_2=1; _CU_PHYSICS_3=0;
+        export _MP_PHYSICS_1=5; export _MP_PHYSICS_2=5;  export _MP_PHYSICS_3=5
+        export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
+        export _CU_PHYSICS_1=0; _CU_PHYSICS_2=0; _CU_PHYSICS_3=0
 
         
-        export _E_VERT=35  # Number o vertical levels. The levels are
+        export _E_VERT=42  # Number o vertical levels. The levels are
                            #   automatically calculated (auto_levels_opt=2)
                            #   stretching in lower and in top of the atmosphere.    
 
@@ -794,13 +788,12 @@ case $CONFIG in
         export  _FEEDBACK=1 # 0 one-way no feedback    1 two-way w/ feedbak (default)
         export  _SMOOTH=2   # Default=2
         
-        export _MP_PHYSICS_1=3; export _MP_PHYSICS_2=3;  export _MP_PHYSICS_3=3
-        export _BL_PBL_PHYSICS
-        _1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
-        export _CU_PHYSICS_1=1; _CU_PHYSICS_2=1; _CU_PHYSICS_3=0;
+        export _MP_PHYSICS_1=5; export _MP_PHYSICS_2=5;  export _MP_PHYSICS_3=5
+        export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
+        export _CU_PHYSICS_1=0; _CU_PHYSICS_2=0; _CU_PHYSICS_3=0
 
         
-        export _E_VERT=35  # Number o vertical levels. The levels are
+        export _E_VERT=42  # Number o vertical levels. The levels are
                            #   automatically calculated (auto_levels_opt=2)
                            #   stretching in lower and in top of the atmosphere.  
 
@@ -857,12 +850,12 @@ case $CONFIG in
         export  _FEEDBACK=1 # 0 one-way no feedback    1 two-way w/ feedbak (default)
         export  _SMOOTH=2   # Default=2
         
-        export _MP_PHYSICS_1=3; export _MP_PHYSICS_2=3;  export _MP_PHYSICS_3=3
+        export _MP_PHYSICS_1=5; export _MP_PHYSICS_2=5;  export _MP_PHYSICS_3=5
         export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
-        export _CU_PHYSICS_1=1; _CU_PHYSICS_2=1; _CU_PHYSICS_3=0;
+        export _CU_PHYSICS_1=16; _CU_PHYSICS_2=0; _CU_PHYSICS_3=0
 
         
-        export _E_VERT=35  # Number o vertical levels. The levels are
+        export _E_VERT=42  # Number o vertical levels. The levels are
                            #   automatically calculated (auto_levels_opt=2)
                            #   stretching in lower and in top of the atmosphere.    
        
@@ -921,12 +914,12 @@ case $CONFIG in
         export  _FEEDBACK=1 # 0 one-way no feedback    1 two-way w/ feedbak (default)
         export  _SMOOTH=2   # Default=2
         
-        export _MP_PHYSICS_1=3; export _MP_PHYSICS_2=3;  export _MP_PHYSICS_3=3
+        export _MP_PHYSICS_1=5; export _MP_PHYSICS_2=5;  export _MP_PHYSICS_3=5
         export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
-        export _CU_PHYSICS_1=1; _CU_PHYSICS_2=1; _CU_PHYSICS_3=0;
+        export _CU_PHYSICS_1=16; _CU_PHYSICS_2=16; _CU_PHYSICS_3=16;
 
         
-        export _E_VERT=35  # Number o vertical levels. The levels are
+        export _E_VERT=42  # Number o vertical levels. The levels are
                            #   automatically calculated (auto_levels_opt=2)
                            #   stretching in lower and in top of the atmosphere.    
 
@@ -982,12 +975,12 @@ case $CONFIG in
         export  _FEEDBACK=1 # 0 one-way no feedback    1 two-way w/ feedbak (default)
         export  _SMOOTH=2   # Default=2
         
-        export _MP_PHYSICS_1=3; export _MP_PHYSICS_2=3;  export _MP_PHYSICS_3=3
+        export _MP_PHYSICS_1=5; export _MP_PHYSICS_2=5;  export _MP_PHYSICS_3=5
         export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
-        export _CU_PHYSICS_1=1; _CU_PHYSICS_2=1; _CU_PHYSICS_3=0;
+        export _CU_PHYSICS_1=16; _CU_PHYSICS_2=16; _CU_PHYSICS_3=16;
 
         
-        export _E_VERT=35  # Number o vertical levels. The levels are
+        export _E_VERT=42  # Number o vertical levels. The levels are
                            #   automatically calculated (auto_levels_opt=2)
                            #   stretching in lower and in top of the atmosphere.    
 
@@ -1044,12 +1037,11 @@ case $CONFIG in
         export  _FEEDBACK=1 # 0 one-way no feedback    1 two-way w/ feedbak (default)
         export  _SMOOTH=2   # Default=2
         
-        export _MP_PHYSICS_1=3; export _MP_PHYSICS_2=3;  export _MP_PHYSICS_3=3
+        export _MP_PHYSICS_1=5; export _MP_PHYSICS_2=5;  export _MP_PHYSICS_3=5
         export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
-        export _CU_PHYSICS_1=1; _CU_PHYSICS_2=1; _CU_PHYSICS_3=0;
-
+        export _CU_PHYSICS_1=16; _CU_PHYSICS_2=16; _CU_PHYSICS_3=0;
         
-        export _E_VERT=35  # Number o vertical levels. The levels are
+        export _E_VERT=42  # Number o vertical levels. The levels are
                            #   automatically calculated (auto_levels_opt=2)
                            #   stretching in lower and in top of the atmosphere.   
 
@@ -1107,19 +1099,72 @@ case $CONFIG in
         export  _FEEDBACK=1 # 0 one-way no feedback    1 two-way w/ feedbak (default)
         export  _SMOOTH=2   # Default=2
         
-        export _MP_PHYSICS_1=3; export _MP_PHYSICS_2=3;  export _MP_PHYSICS_3=3
+        export _MP_PHYSICS_1=5; export _MP_PHYSICS_2=5;  export _MP_PHYSICS_3=5
         export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
-        export _CU_PHYSICS_1=1; _CU_PHYSICS_2=1; _CU_PHYSICS_3=0;
+        export _CU_PHYSICS_1=16; _CU_PHYSICS_2=16; _CU_PHYSICS_3=0;
 
         
-        export _E_VERT=35  # Number o vertical levels. The levels are
+        export _E_VERT=42  # Number o vertical levels. The levels are
                            #   automatically calculated (auto_levels_opt=2)
                            #   stretching in lower and in top of the atmosphere.   
 
 ;;
 
-*) echo "Não válida ..."
-esac
+
+
+
+[lL]) # 3 domains - South America - Sãoo Paulo - São José dos Campos 
+        CONFIG_NAME="americasul-r_sudeste-SP-sjcampos-3d"
+        
+        export _MAX_DOMAIN=3
+        export _WRF_TIME_STEP=216
+        if [ -z ${_T_INTERVAL_OUTPUT_1} ]; then  # Not set by the user
+            export _T_INTERVAL_OUTPUT_1=180  ## interval time: 3 h for DOMAIN 1
+        fi
+        export _T_INTERVAL_OUTPUT_2=60  ## interval time: 1 h for DOMAIN 2
+        export _T_INTERVAL_OUTPUT_3=60  ## interval time: 1 h for DOMAIN 3
+       
+        export _PARENT_ID_2=1;  export _PARENT_ID_3=2
+        export _I_PARENT_START_2=54 ; export _I_PARENT_START_3=54
+        export _J_PARENT_START_2=63 ; export _J_PARENT_START_3=62
+        
+        export _GEODATA_RES_1=10m; export _GEODATA_RES_2=2m; export _GEODATA_RES_3=30s
+        export _MAP_PROJECTION=lambert
+        export _E_WE_1=166;  export _E_WE_2=166;  export _E_WE_3=163
+        export _E_SN_1=188;  export _E_SN_2=190;  export _E_SN_3=190
+
+        export _DX_1=36000
+        export _DY_1=36000
+        
+        export _DX_2=12000
+        export _DY_2=12000
+        
+        export _DX_3=4000
+        export _DY_3=4000
+
+        export _REF_LAT=-23.33;  export _REF_LON=-44.8
+        export _TRUELAT1=-22.522; export _TRUELAT2=-22.522; export _STAND_LON=-44.902
+        
+        GLOBAL_DATE_TIME_INTERVAL=3
+        GLOBAL_DATA=gfs0p25
+        GLOBAL_DATA_SOURCE="gfs"
+        
+        export _PARENT_RATIO_2=3
+        export _PARENT_RATIO_3=3
+        
+        export  _FEEDBACK=0
+        export  _SMOOTH=2
+        
+        export _MP_PHYSICS_1=5; export _MP_PHYSICS_2=5;  export _MP_PHYSICS_3=5
+        export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
+        export _CU_PHYSICS_1=16; _CU_PHYSICS_2=16; _CU_PHYSICS_3=16;
+        export _E_VERT=42
+
+;;
+
+
+    *) echo "Não válida ..."
+    esac
     
     NUM_PARAM=$(( $NUM_PARAM + 1))
     
@@ -1489,8 +1534,11 @@ if [ $# -lt $result ]; then
 fi
 
 # Before process user parameters, we need check something
-# TODO TODO NCDUMP
-
+# Test for ncdump ($NETCDF/bin/ncdump): this program is used
+#  to extract the number of levels from output of metgrid.exe
+/usr/bin/file --mime $NETCDF/bin/ncdump | grep binary
+[[ $? -eq 0 ]] && NCDUMP=$NETCDF/bin/ncdump || shutdown_execution "ERROR: the program ncdump not found." 1
+f_debug $0 "We will use the ncdump in: " $NCDUMP
 
 
 
@@ -1772,11 +1820,12 @@ fi
 
 
 
-
-echo " " >> ${DIR_DATA_OUTPUT}/wrf-executions.log
-echo "START: ${START_YEAR}-${START_MONTH}-${START_DAY}-${START_HOUR}" >> ${DIR_DATA_OUTPUT}/wrf-executions.log
-echo "END: ${END_YEAR}-${END_MONTH}-${END_DAY}-${END_HOUR} " >> ${DIR_DATA_OUTPUT}/wrf-executions.log
-echo -e "RUN TIME (hours): ${RUN_TIME_HOURS}  WRF_TIME_STEP (s): ${_WRF_TIME_STEP}" >> ${DIR_DATA_OUTPUT}/wrf-executions.log
+echo "------------------------------------------------------------------------------------ " >> ${DIR_DATA_OUTPUT}/wrf-executions.log
+#echo " " >> ${DIR_DATA_OUTPUT}/wrf-executions.log
+echo -e "STARTING time: $( date +%G%b%d-%Hh%Mmin%ms )" >> ${DIR_DATA_OUTPUT}/wrf-executions.log
+echo "${DIR_DOMAIN_OUTPUT} = ${DIR_WRF_OUTPUT}" >> ${DIR_DATA_OUTPUT}/wrf-executions.log
+echo -e "\n Model Integration START: ${START_YEAR}-${START_MONTH}-${START_DAY}-${START_HOUR} END: ${END_YEAR}-${END_MONTH}-${END_DAY}-${END_HOUR} " >> ${DIR_DATA_OUTPUT}/wrf-executions.log
+echo "Model Integration RUN TIME (hours): ${RUN_TIME_HOURS}  WRF_TIME_STEP (s): ${_WRF_TIME_STEP}" >> ${DIR_DATA_OUTPUT}/wrf-executions.log
 
 
 ###########################################################
@@ -1789,19 +1838,6 @@ echo -e "RUN TIME (hours): ${RUN_TIME_HOURS}  WRF_TIME_STEP (s): ${_WRF_TIME_STE
 # WRF: real.exe -> wrf.exe
 ###########################################################
 ###########################################################
-
-# Em 24mai08: modificacao da variavel abaixo, pois no crontab ela nao era ajustada
-#             de forma correta (algum problema com o retorno do pwd). Somente no run3.sh.
-# CURRENT_DIR=/home/$USER/modelo
-# Em 01mai11: variável será exportada, pois será usada por um outro script
-#  (compilar-mm5.sh)
-# Em 28mar13: a variavel CURRENT_DIR será ajustada no início e deve conter, geralmente, o diretório
-#             onde se encontra o script do modelo.
-if [ $DH_HOW_RUN_SCRIPT = "AUTOMATIC" ]; then
-    export CURRENT_DIR
-else
-    export CURRENT_DIR=$(pwd)
-fi
 
 
 # Valores para status:
@@ -2015,39 +2051,32 @@ if [ x$USE_STATIC_NAMELIST_FILES == x"no" ]; then
         #    $3 : run time length of forecast (in hours): 24, 48, 72
         #    $4 : temporal interval in which the input data are available (time step of global data, in hours): 1 (cptec-wrf), 3 (gfs), 6 (gfs)
 
-    cp ${CURRENT_DIR}/wrf/namelist.input.wrf.sh  ${WRF_PATH}/test/em_real/
-
+    if [ ${GEN_WRFOUT_DIAGS_AFWA} -eq 1 ]; then
+        cp ${CURRENT_DIR}/wrf/namelist.input.wrf.afwa-diags.sh  ${WRF_PATH}/test/em_real/namelist.input.wrf.sh
+    else
+        cp ${CURRENT_DIR}/wrf/namelist.input.wrf.sh  ${WRF_PATH}/test/em_real/namelist.input.wrf.sh
 
     # Apagar o arquivo (link) namelis.input anterior
     if [ -e ${WRF_PATH}/test/em_real/namelist.input ]; then
         rm -f ${WRF_PATH}/test/em_real/namelist.input 2>/dev/null
     fi
 
-    # Em 19jun2021: considerando problemas de usar um mesmo
-    #   binário para diferentes plataformas, será usada a versão
-    #   compilada durante instalação do NetCDF
-    #   Normalmente instalado em: /home/USER/bin/lib/netcdf/bin/ncdump
-        
-    # cp ${CURRENT_DIR}/wrf/ncdump ${WRF_PATH}/run/
-    # TODO TODO test for ncdump file (provided by instalation of NetCDF4)
-        
-    # 20210619: será usado ncdump da versão instalada pelo NetCDF
-    #NUM_METGRID_LEVELS=$(${WRF_PATH}/run/ncdump -h ${WPS_PATH}/data/met_em.d01.${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}:00:00.nc | grep num_metgrid_levels | head -n1 | cut -d' ' -f 3)
-    #status=$?
-    NUM_METGRID_LEVELS=27
-    status=0
+    # Program ncdump: we will use the one provided by instalation of NetCDF4)
+    NUM_METGRID_LEVELS=$($NCDUMP -h ${WPS_PATH}/data/met_em.d01.${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}:00:00.nc | grep num_metgrid_levels | head -n1 | cut -d' ' -f 3)
+    status=$?
 
     ## DEBUG
     f_debug $0 NUM_METGRID_LEVELS $NUM_METGRID_LEVELS
         
     # This test is a minimum requirement, because there were more specific
     if [[ $status -ne 0 ]] || [[ $NUM_METGRID_LEVELS -lt 25 ]] || [[ $NUM_METGRID_LEVELS -gt 60 ]]; then
-        shutdown_execution  "ERROR in (${WRF_PATH}/run/ncdump -h ${WPS_PATH}/data/met_em.d01.${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}:00:00.nc): status or number of leves returned. Exiting."  1
+        shutdown_execution  "ERROR in ($NCDUMP -h ${WPS_PATH}/data/met_em.d01.${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}:00:00.nc): number of levels. Exiting."  1
     fi
 
     cd ${WRF_PATH}/test/em_real/ 2>/dev/null
-        
+
     chmod u+x ${WRF_PATH}/test/em_real/namelist.input.wrf.sh
+
         
     ./namelist.input.wrf.sh ${NUM_METGRID_LEVELS} ${START_YEAR}-${START_MONTH}-${START_DAY}-${START_HOUR}  ${END_YEAR}-${END_MONTH}-${END_DAY}-${END_HOUR}  ${RUN_TIME_HOURS} ${GLOBAL_DATE_TIME_INTERVAL}
     # First, save the status of execution, and,
@@ -2111,27 +2140,25 @@ if [ $status -ne 0 ]; then
     mpirun -v --map-by core -np $NUM_PROC ${WRF_PATH}/run/real.exe
     status=$?
 
-    # First, backup the LOG and OUTPUT files to the WRF output dir    
+    # Backup the LOG and OUTPUT files to the WRF output dir    
     # rsl.{out,error}.00xx  where xx are the core (task process) in execution (:from np)
-    cp ${WRF_PATH}/run/rsl.{out,error}.0??? ${DIR_WRF_OUTPUT}/real.rsl.{out,error}.0??? 2>/dev/null    
+    cp ${WRF_PATH}/run/rsl.*.* ${DIR_WRF_OUTPUT} 2>/dev/null
+    cd ${DIR_WRF_OUTPUT}
+    for file in rsl.{out,error}.* ; do mv $file $(echo $file | sed s/rsl./rsl.real./) ; done
+    cd -
    
  
-    ### START TESTING the output of real
-    if [ ! -e ${WRF_PATH}/run/rsl.out.0000 ]; then
+    if [ ! -e ${DIR_WRF_OUTPUT}/rsl.real.out.0000 ]; then
       shutdown_execution "ERROR in (mpirun -np ${NUM_PROC} ${WRF_PATH}/run/real.exe): file ${WRF_PATH}/run/rsl.out.0000 not found. Exiting ..."  1
     fi    
 
-    #  real_em: SUCCESS COMPLETE REAL_EM INIT
-    grep -i "SUCCESS COMPLETE REAL_EM INIT" ${WRF_PATH}/run/rsl.out.0000
+    grep -i "SUCCESS COMPLETE REAL_EM INIT" ${DIR_WRF_OUTPUT}/rsl.real.out.0000
     if [ $? -ne 0 ]; then
         shutdown_execution "ERROR in (mpirun -np ${NUM_PROC} ${WRF_PATH}/run/real.exe). Exiting ..." 1
     fi
 
     # Check the output file (wrfinput_d01: single time level data at model's start time)
-    if [ -e  ${WRF_PATH}/run/wrfinput_d01 ] && [ -e  ${WRF_PATH}/run/wrfbdy_d01 ]; then  
-        
-        
-    
+    if [ -e  ${WRF_PATH}/run/wrfinput_d01 ] && [ -e  ${WRF_PATH}/run/wrfbdy_d01 ]; then
         # Number of output Times for lateral boundary output
         #           Times - 1
         NUM_OUTPUT_TIMES=$(( $RUN_TIME_HOURS / $GLOBAL_DATE_TIME_INTERVAL ))
@@ -2159,11 +2186,8 @@ if [ $status -ne 0 ]; then
 
     ### FINISH TESTING the output of real
     
-
-    
     mensagem "<<<<<<<<  Running:(mpirun -np $NUM_PROC ${WRF_PATH}/run/real.exe) --- ENDING"
-    
-    
+   
     cp ${WRF_PATH}/run/wrfinput_d0? ${DIR_WRF_OUTPUT} 2>/dev/null
     cp ${WRF_PATH}/run/wrfbdy_d01 ${DIR_WRF_OUTPUT} 2>/dev/null
     
@@ -2207,32 +2231,27 @@ if [ ${status} -ne 0 ]; then
     [[ -e ${WRF_PATH}/run/wrfinput_d01 ]] ||  shutdown_execution "ERROR. Input file (${WRF_PATH}/test/em_real/wrfinput_d01) not found. Exiting ..." 1      
     [[ -e ${WRF_PATH}/run/wrfbdy_d01 ]] ||  shutdown_execution "ERROR. Input file (${WRF_PATH}/test/em_real/wrfbdy_d01) not found. Exiting ..." 1
           
-
     
     mpirun -v --map-by core $WRF_PARAM_FOR_MPI_1 -np ${NUM_PROC} ./wrf.exe
-    
-    TEMPO_TOTAL=$(cat rsl.out.0000 | grep "Timing for main" | awk '{ SUM += $9} END { print SUM }')
 
-    ## DEBUG
-    # f_debug $0 "TEMPO DE INTEGRACAO (s)" $TEMPO
-    f_debug $0 "TEMPO TOTAL (s)" $TEMPO_TOTAL    
-    
-    echo -e "Total time of wrf.exe execution (seconds) \n" >> ${DIR_DATA_OUTPUT}/wrf-executions.log
-
-
-    # First, backup the LOG and INPUT files (from real.exe) to the WRF output dir    
-    # rsl.{out,error}.00xx  where xx are the core (task process) in execution (:from np)
-    cp ${WRF_PATH}/run/rsl.{out,error}.0??? ${DIR_WRF_OUTPUT} 2>/dev/null
     cp ${WRF_PATH}/run/wrfinput_d0? ${DIR_WRF_OUTPUT} 2>/dev/null
-    cp ${WRF_PATH}/run/wrfbdy_d01 ${DIR_WRF_OUTPUT} 2>/dev/null    
+    cp ${WRF_PATH}/run/wrfbdy_d01 ${DIR_WRF_OUTPUT} 2>/dev/null
     
-    ### START TESTING the output of wrf
+    
+    ### START TESTING the output of wrf    
     if [ ! -e ${WRF_PATH}/run/rsl.out.0000 ]; then
       shutdown_execution "ERROR in (mpirun -v --map-by core  $WRF_PARAM_FOR_MPI_1 -np ${NUM_PROC} ./wrf.exe): file rsl.out.0000 not found. Exiting ..."  1
     fi        
+
+    # Backup the LOG and INPUT files (from wrf.exe) to the WRF output dir    
+    # rsl.{out,error}.00xx  where xx are the core (task process) in execution (:from np)
+    mv ${WRF_PATH}/run/rsl.*.* ${DIR_WRF_OUTPUT} 2>/dev/null
     
-    #  wrf.exe: SUCCESS COMPLETE WRF
-    grep -i "SUCCESS COMPLETE WRF" ${WRF_PATH}/run/rsl.out.0000
+    cd ${DIR_WRF_OUTPUT}
+    for file in rsl.{out,error}.* ; do mv $file $(echo $file | sed s/rsl./rsl.wrf./) ; done
+    cd -
+
+    grep -i "SUCCESS COMPLETE WRF" ${DIR_WRF_OUTPUT}/rsl.wrf.out.0000
     if [ $? -ne 0 ]; then
         shutdown_execution "ERROR in (mpirun -v --map-by core $WRF_PARAM_FOR_MPI_1 -np ${NUM_PROC} ./wrf.exe). Exiting ..." 1
     fi    
@@ -2246,25 +2265,51 @@ if [ ${status} -ne 0 ]; then
     if [ $_MAX_DOMAIN -eq 3 ]; then
         [[ -e wrfout_d03_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}:00:00 ]] ||  shutdown_execution "ERROR in (mpirun -v --map-by core $WRF_PARAM_FOR_MPI_1 -np ${NUM_PROC} ./wrf.exe). Output file (${WRF_PATH}/run/wrfout_d02_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}:00:00) not created. Exiting ..." 1
     fi
+
+    # Write the time spent by wrf.exe
+    TIME_SPENT_S=$(grep "Timing for main" ${DIR_WRF_OUTPUT}/rsl.wrf.out.0000 | awk '{ SUM += $9} END { print SUM }')
+    RESULT=$(( TIME_SPENT_S/3600 ))
+    TIME_SPENT_H=$( printf "%d" $RESULT )
+    if [ $TIME_SPENT_H -gt 48 ]; then
+        RESULT=$(( TIME_SPENT_H/24 ))
+        TIME_SPENT_DAYS=$( printf "%f" $RESULT )
+    fi
+
+
+    echo "WRF: total time of wrf.exe execution: $TIME_SPENT_S (seconds) $TIME_SPENT_H (hours) $TIME_SPENT_DAYS (days)" >> ${DIR_DATA_OUTPUT}/wrf-executions.log
+     
+    ## DEBUG
+    f_debug $0 "TOTAL TIME that wrf.exe spent running (h)" $TIME_SPENT_H    
     
     
-    ### FINISH TESTING the output of wrf   
+    ### FINISH TESTING the output of wrf
 
     # WRF run with sucess and the output files were created. Then
     #    backup (MOVE) the files to the WRF output dir
     mv ${WRF_PATH}/run/wrfout_d0[1-3]*  ${DIR_WRF_OUTPUT} 2>/dev/null
     
-    mv ${WRF_PATH}/run/WRF-out-diagnostics_PLEVELS_domain_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}.grb ${DIR_WRF_OUTPUT} 2>/dev/null
-    mv ${WRF_PATH}/run/WRF-out-diagnostics_ZLEVELS_domain_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}.grb ${DIR_WRF_OUTPUT} 2>/dev/null
-    mv ${WRF_PATH}/run/radar_domain.${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR} ${DIR_WRF_OUTPUT}.grb 2>/dev/null
+    cd ${DIR_WRF_OUTPUT}
+    for file in wrfout_d*; do mv $file $(echo $file | cut -d':' -f 1).nc ; done
+    cd -    
+
+
+    if [ ${GEN_WRFOUT_DIAGS_AFWA} -eq 1 ]; then
+        mv ${WRF_PATH}/run/WRF-out-diagnostics_PLEVELS_domain_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}.grb ${DIR_WRF_OUTPUT} 2>/dev/null
+        mv ${WRF_PATH}/run/WRF-out-diagnostics_ZLEVELS_domain_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}.grb ${DIR_WRF_OUTPUT} 2>/dev/null
+        mv ${WRF_PATH}/run/WRF-out-radar_domain_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}.grb ${DIR_WRF_OUTPUT} 2>/dev/null
+    fi
+
+
     
+    # With no error, we can move INPUT files (from real.exe) to the WRF output dir
+    mv ${WRF_PATH}/run/wrfinput_d0? ${DIR_WRF_OUTPUT} 2>/dev/null
+    mv ${WRF_PATH}/run/wrfbdy_d01 ${DIR_WRF_OUTPUT} 2>/dev/null    
+        
     # Only adjusts SUCCESS to WRF if there were no ERROR
-    sed -i /WRF/s/1/0/ ${DIR_WRF_OUTPUT}/status-components-out-execution.log    
+    sed -i /WRF/s/1/0/ ${DIR_WRF_OUTPUT}/status-components-out-execution.log
     
     mensagem "<<<<<<< Program wrf.exe (ENDING)"
 fi
-
-
 
 
 ###########################################################
@@ -2327,6 +2372,9 @@ if [ $status -ne 0 ]; then
     
     # Next, verify the output from status
     [[ $status -ne 0 ]] && shutdown_execution  "ERROR: problem in (./process_arwpost.sh $CONFIG "${BIN_PATH}/ARWpost" $DIR_WRF_OUTPUT  ${START_YEAR}-${START_MONTH}-${START_DAY}-${START_HOUR}  ${END_YEAR}-${END_MONTH}-${END_DAY}-${END_HOUR}). Exiting."  1
+
+    # Only adjusts SUCCESS to WRF if there were no ERROR
+    sed -i /ARWPOST/s/1/0/ ${DIR_WRF_OUTPUT}/status-components-out-execution.log
     
     mensagem "<<<<<<< Program ARWpost.exe (ENDING)"
    
@@ -2394,7 +2442,6 @@ fi
 #                  
 #     
 # ========================================================
-
 #   ${DIR_WRF_OUTPUT}/WRF-out-diagnostics_PLEVELS_domain_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}.grb
 #   ${DIR_WRF_OUTPUT}/WRF-out-diagnostics_ZLEVELS_domain_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}.grb
 #   ${DIR_WRF_OUTPUT}/radar_domain.${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR} ${DIR_WRF_OUTPUT}.grb
@@ -2403,23 +2450,34 @@ fi
 
 
 #########################################
-#  FINALIZANDO E AJUSTANDO O STATUS
-#  Sera usado para executar o modelo nas mesmas confs,
-#     a partir do ponto onde houve a falha. O arquivo status-components-out-execution.log
-#     possui status para cada fase
+#  FINISHING and ADJUSTING STATUS
+#  It will be used to run the same configuration at the point
+#      where it left off due to PROBLEMS in some component.
+#  The file ${DIR_WRF_OUTPUT}/status-components-out-execution.log
+#      will contain the results (0 sucess or 1 not executed) for all
+#      the components of the model.
 #########################################
 
-# Em 19mar13: modificacao do ajuste de saida.
-# Valores para status:
-# 0 = diretório já existe e a rodada foi completada
-# 1 = diretório já existe e a rodada não foi completada com sucesso
-# 2 = diretório não existe ainda
+echo "FINISH time: $( date +%G%b%d-%Hh%Mmin%ms )" >> ${DIR_DATA_OUTPUT}/wrf-executions.log
+echo "------------------------------------------------------------------------------------  " >> ${DIR_DATA_OUTPUT}/wrf-executions.log
+
+
+
+# 19mar13: what the output numbers means (status):
+# 0 = directory exists and the run finished
+# 1 = directory exists and there was a problem in the execution
+# 2 = directory does not exist yet
+
+# Search for some value 1 (ERROR in some component).
 grep 1$ ${DIR_WRF_OUTPUT}/status-components-out-execution.log
-# $? = 0 foi encontrado um modulo com falha (saida 1)
-if [ $? -eq 0 ]; then
+# If $? = 0 then some module does not finish the execution
+if [ $? = 0 ]; then
     echo 1 > ${DIR_WRF_OUTPUT}/status-current-configuration.log
     exit 1
+else
+    echo 0 > ${DIR_WRF_OUTPUT}/status-current-configuration.log
 fi
+
 
 exit 0
 

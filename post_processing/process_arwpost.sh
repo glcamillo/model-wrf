@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 #  Encoding UTF-8
-#  Last revision: 2022-03-07
+#  Last revision: 2022-06-13
 #
 #  process_arwpost : build the Namelist (namelist.wps) for the Post-Processing.
 #          Namelist used by the ARWpost/ARWpost.exe to generate GrADS files (dat,ctl)
@@ -9,8 +9,6 @@
 #  *** Important Obs: there are repetitive code (the original wasn't), but we need
 #          to considerer that in future, we will different output processing for
 #          different domain configurations.
-#
-#   20220212: creation of this script; original code was in the main script (runwrf.sh)
 #
 #  Input Parameters:
 #    $1 : domain configuration: A | B | C ...
@@ -20,13 +18,17 @@
 #    $5 : date-time of ending of simulation (final date-time): 2021-12-02-00
 #  Output:
 #    bin/ARWpost/namelist.ARWpost
+#  Valores passados como parâmetros:
+#    1: Caminho dos dados  2:Número do domínio 3:Tipo de nível de saída
+#    Para o terceiro parâmetro:
+#    0:níveis do modelo (sigma) 1:níveis de pressão  2:níveis em altura
+#    MERCATOR_DEFS=.False.    .True. (for large domains)
+
+#  20220212: creation of this script; original code was in the main script (runwrf.sh)
+#  20200613: change in wrf.exe output filename:
+#           wrfout_d01_2022-02-22_00:00:00 wrfout_d01_2022-02-22_00.nc  
 
 
-# Valores passados como parâmetros:
-# 1: Caminho dos dados  2:Número do domínio 3:Tipo de nível de saída
-# Para o terceiro parâmetro:
-# 0:níveis do modelo (sigma) 1:níveis de pressão  2:níveis em altura
-# MERCATOR_DEFS=.False.    .True. (for large domains)
 
 
 ###################################################################
@@ -120,14 +122,13 @@ f_debug $0 END_DATE_TIME $END_YEAR$END_MONTH$END_DAY$END_HOUR
 # IMPORTANT: only tested for the first domain. Some configurations have domains 2 and/or 3.
 #            These will be tested in the specific sections below.
 f_debug $0 " Path of DIR_WRF_OUTPUT"  $3
-ls $3/wrfout_d01_"$START_YEAR"-"$START_MONTH"-"$START_DAY"_"$START_HOUR":00:00  1> /dev/null 2>&1
+ls $3/wrfout_d01_"$START_YEAR"-"$START_MONTH"-"$START_DAY"_"$START_HOUR".nc  1> /dev/null 2>&1
 if [ $? -ne 0 ]; then
     mensagem "ERROR in the parameter ${3}"
-    mensagem "No WRF output files ${3}/wrfout_d0[1|3]_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}:00:00 found"
+    mensagem "No WRF output files ${3}/wrfout_d0[1|3]_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}.nc found"
     exit 1
 fi
 DIR_WRF_OUTPUT=$3
-
 
 # 0: padrão do modelo (sigma)
 # 1: níveis em pressão
@@ -250,9 +251,9 @@ if [ $CONFIG = 'A' ] ||  [ $CONFIG = 'H' ] ||  [ $CONFIG = 'I' ]; then
     ###   Domain D2   ###
     mensagem ">>>>>>> D2:generating ${BIN_PATH}/ARWpost/namelist.ARWpost and then executing ${BIN_PATH}/ARWpost/ARWpost.exe --- STARTING"
     
-    ls $3/wrfout_d02_"$START_YEAR"-"$START_MONTH"-"$START_DAY"_"$START_HOUR":00:00  1> /dev/null 2>&1
+    ls $3/wrfout_d02_"$START_YEAR"-"$START_MONTH"-"$START_DAY"_"$START_HOUR".nc  1> /dev/null 2>&1
     if [ $? -ne 0 ]; then
-        mensagem " No WRF output file: $3/wrfout_d02_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}:00:00"
+        mensagem " No WRF output file: $3/wrfout_d02_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}.nc"
         exit 1
     fi
     
@@ -301,9 +302,9 @@ if [ $CONFIG = 'A' ] ||  [ $CONFIG = 'H' ] ||  [ $CONFIG = 'I' ]; then
     mensagem ">>>>>>> D3:generating ${BIN_PATH}/ARWpost/namelist.ARWpost and then executing ${BIN_PATH}/ARWpost/ARWpost.exe --- STARTING"
     echo -e ">> SIGMA output <<\n"
 
-    ls $3/wrfout_d03_"$START_YEAR"-"$START_MONTH"-"$START_DAY"_"$START_HOUR":00:00  1> /dev/null 2>&1
+    ls $3/wrfout_d03_"$START_YEAR"-"$START_MONTH"-"$START_DAY"_"$START_HOUR".nc  1> /dev/null 2>&1
     if [ $? -ne 0 ]; then
-        mensagem " No WRF output file: $3/wrfout_d02_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}:00:00"
+        mensagem " No WRF output file: $3/wrfout_d02_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}.nc"
         exit 1
     fi
     
@@ -456,9 +457,9 @@ if [ $CONFIG = 'B' ] ||  [ $CONFIG = 'C' ] ||  [ $CONFIG = 'G' ] ||  [ $CONFIG =
     mensagem ">>>>>>> D2:generating ${BIN_PATH}/ARWpost/namelist.ARWpost and then executing ${BIN_PATH}/ARWpost/ARWpost.exe --- STARTING"
     echo -e ">> SIGMA output <<\n"
 
-    ls $3/wrfout_d02_"$START_YEAR"-"$START_MONTH"-"$START_DAY"_"$START_HOUR":00:00  1> /dev/null 2>&1
+    ls $3/wrfout_d02_"$START_YEAR"-"$START_MONTH"-"$START_DAY"_"$START_HOUR".nc  1> /dev/null 2>&1
     if [ $? -ne 0 ]; then
-        mensagem " No WRF output file: $3/wrfout_d02_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}:00:00"
+        mensagem " No WRF output file: $3/wrfout_d02_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}.nc"
         exit 1
     fi   
     
@@ -544,12 +545,7 @@ if [ $CONFIG == 'D' ] ||  [ $CONFIG == 'E' ] ||  [ $CONFIG == 'F' ]; then
     
     mensagem ">>>>>>> Program arwpost.exe (STARTING) for config:$CONFIG"    
 
-    #####################
-    ###   Domain D1   ### 
-    mensagem ">>>>>>> D1:generating ${BIN_PATH}/ARWpost/namelist.ARWpost and then executing ${BIN_PATH}/ARWpost/ARWpost.exe --- STARTING"
-    echo -e ">> SIGMA output <<\n"
-         
-    ${BIN_PATH}/ARWpost/namelist.ARWpost.sh ${DIR_WRF_OUTPUT} 1 SIG $INTERVAL_PLOT_IN_SECONDS $MERCATOR_DEFS ${START_YEAR}-${START_MONTH}-${START_DAY}-${START_HOUR} ${END_YEAR}-${END_MONTH}-${END_DAY}-${END_HOUR}
+    ${BIN_PATH}/ARWpost/namelist.ARWpost.sh $DIR_WRF_OUTPUT 1 SIG $INTERVAL_PLOT_IN_SECONDS $MERCATOR_DEFS ${START_YEAR}-${START_MONTH}-${START_DAY}-${START_HOUR} ${END_YEAR}-${END_MONTH}-${END_DAY}-${END_HOUR}
           
     STATUS_SIG_D1=$?
 
@@ -568,7 +564,11 @@ if [ $CONFIG == 'D' ] ||  [ $CONFIG == 'E' ] ||  [ $CONFIG == 'F' ]; then
         #shutdown_execution "ERROR: Problema na execucao do ARWpost.exe (Dominio UM - SIGMA). Saindo ..." 1
         # shutdown_execution  "ERROR: problem in execution of ${BIN_PATH}/ARWpost/namelist.ARWpost.sh. Exiting."  1
     fi
-    
+ 
+
+    #####################
+    ###   Domain D1   ### 
+
     echo -e ">> PRESSURE output <<\n"
     
     ${BIN_PATH}/ARWpost/namelist.ARWpost.sh ${DIR_WRF_OUTPUT} 1 PRES $INTERVAL_PLOT_IN_SECONDS $MERCATOR_DEFS ${START_YEAR}-${START_MONTH}-${START_DAY}-${START_HOUR} ${END_YEAR}-${END_MONTH}-${END_DAY}-${END_HOUR}
