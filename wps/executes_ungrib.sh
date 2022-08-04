@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 #
 #  Encoding UTF-8
 #  Last revision: 2022-04-22

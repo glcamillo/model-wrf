@@ -1,7 +1,7 @@
-#!/bin/bash
+#!/bin/bash -x
 #
 #  Encoding: UTF-8
-#  Last revision: 2022-03-07
+#  Last revision: 2022-05-18
 #  
 #  fetch_global_data.sh: fetch the files resulted from execution of global model (GFS, etc)
 #
@@ -152,8 +152,6 @@ if [ ${GD_SOURCE} = "gfs0p25" ] || [ ${GD_SOURCE} = "gfs0p50" ] || [ ${GD_SOURCE
 # https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.t12z.pgrb2.1p00.f000
 # https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.20210308/12/gfs.t12z.pgrb2.1p00.f000
 
-# wget - q
-
 
     COPIADOS=1
     while [ $COPIADOS -eq 1 ]
@@ -176,13 +174,13 @@ if [ ${GD_SOURCE} = "gfs0p25" ] || [ ${GD_SOURCE} = "gfs0p50" ] || [ ${GD_SOURCE
             else
                 echo
                 COPIADOS=1
-                echo "File NOT copied:  $1/gfs.t${START_HOUR}z.pgrb2.${RES_G_NCEP}.f${TIME_FORECAST} NÂO COPIADO."
+                echo "File NOT copied:  $1/gfs.t${START_HOUR}z.pgrb2.${RES_G_NCEP}.f${TIME_FORECAST}"
                 wget -c -a wget-gfs-t${START_HOUR}z.pgrb2.${RES_G_NCEP}.f${TIME_FORECAST}.log https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.${START_DATE}/${START_HOUR}/atmos/gfs.t${START_HOUR}z.pgrb2.${RES_G_NCEP}.f${TIME_FORECAST}
             fi
-            # Incrementa somente se tiver sido copiado.
+            # Increment only if copied.
             if [ $COPIADOS -eq 0 ] ; then 
                 echo "Increment: ${GLOBAL_DATE_TIME_INTERVAL}"
-                NUM_TIME_FORECAST=$(( ${NUM_TIME_FORECAST} + ${GLOBAL_DATE_TIME_INTERVAL} ))
+                NUM_TIME_FORECAST=$(( $NUM_TIME_FORECAST + $GLOBAL_DATE_TIME_INTERVAL ))
             fi
         done
     done
@@ -264,11 +262,11 @@ if [ ${GD_SOURCE} = "cptec_wrf_5km" ]; then
                 wget -c -a wget-cptec-wrf-${START_DATE_TIME}.log http://ftp.cptec.inpe.br/modelos/tempo/WRF/ams_05km/brutos/${START_YEAR}/${START_MONTH}/${START_DAY}/${START_HOUR}/WRF_cpt_05KM_${START_DATE_TIME}_${END_YEAR}${END_MONTH}${END_DAY}${END_HOUR}.grib2
             fi
             
-            # Incrementa somente se tiver sido copiado.
+            # Increment only if copied.
             if [ $COPIADOS -eq 0 ] ; then 
                 echo "Increment in time forecast (hours): $GLOBAL_DATE_TIME_INTERVAL"
                 NUM_TIME_FORECAST=$(( $NUM_TIME_FORECAST + $GLOBAL_DATE_TIME_INTERVAL ))
-                END_HOUR=$(( $END_HOUR + $GLOBAL_DATE_TIME_INTERVAL ))
+                END_HOUR=$(( 10#$END_HOUR + $GLOBAL_DATE_TIME_INTERVAL ))
                 ## DEBUG
                 f_debug $0 NUM_TIME_FORECAST $NUM_TIME_FORECAST
                 f_debug $0 END_HOUR $END_HOUR

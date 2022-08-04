@@ -1,14 +1,14 @@
 #!/bin/bash
 
 # Enc: UTF-8
-# Last revision: 2022-02-19
+# Last revision: 2022-03-13
 
 #
 # namelist.ARWpost.sh
 #
 # Use
 # ./namelist.ARWpost.sh DIR_WRF_OUTPUT DOMAIN TYPE_OUTPUT_LEVEL INTERVAL MERCATOR_DEFS START_YEAR-START_MONTH-START_DAY-START_HOUR  END_YEAR-END_MONTH-END_DAY-END_HOUR
-#
+
 #  Parameter:
 #    $1 : dir of output data to process: $DIR_WRF_OUTPUT/wrfout_d0*
 #    $2 : domain to process: D1 | D2 | D3
@@ -18,6 +18,8 @@
 #    $6 : date-time of start of simulation: 2021-12-01-00 (00UTC)
 #    $7 : date-time of ending of plotting (final date-time): 2021-12-02-00
 
+#  20200613: change in wrf.exe output filename:
+#           wrfout_d01_2022-02-22_00:00:00 wrfout_d01_2022-02-22_00.nc   
 
 ###################################################################
 
@@ -143,7 +145,7 @@ cat << End_Of_Namelist > ./namelist.ARWpost
 /
 
 &io
- input_root_name = '${DIR_WRF_OUTPUT}/wrfout_d0${DOMAIN}_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}:00:00',
+  input_root_name = '${DIR_WRF_OUTPUT}/wrfout_d0${DOMAIN}_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}.nc',
   output_root_name = '${DIR_WRF_OUTPUT}/wrfout_d0${DOMAIN}_${TYPE_OUTPUT_LEVEL}_${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}',
   plot = 'all',
 ! plot = 'all_list'

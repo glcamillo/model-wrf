@@ -1,7 +1,7 @@
 #!/bin/bash -f
 #
 #  Encoding: UTF-8
-#  Last revision: 2022-02-02
+#  Last revision: 2022-06-13
 #  
 #  namelist.input.wrf.sh : build the Namelist for WRF program.
 #    Used by:  WRF/run/real.exe and WRF/run/wrf.exe
@@ -89,14 +89,17 @@ NUM_METGRID_LEVELS=$1
 f_debug $0 NUM_METGRID_LEVELS $NUM_METGRID_LEVELS
 
 # Date-time of start of simulation (initialization start date-time). Test for correct parameter
+# START_DATE_TIME variable used to adjust the filename for some output diagnostics
 [ -z ${2} ] && exit 1
 grep -E '^20[1-2][0-9]-[0-1][0-9]-[0-3][0-9]-(00|06|12|18)' <<<  ${2} > /dev/null
 [[ $? -ne 0 ]] && exit 1
-START_DATE_TIME=${2}
-START_YEAR=$(cut -d- -f 1 <<<  ${START_DATE_TIME})
-START_MONTH=$(cut -d- -f 2 <<<  ${START_DATE_TIME})
-START_DAY=$(cut -d- -f 3 <<<  ${START_DATE_TIME})
-START_HOUR=$(cut -d- -f 4 <<<  ${START_DATE_TIME})
+START_YEAR=$(cut -d- -f 1 <<<  ${2})
+START_MONTH=$(cut -d- -f 2 <<<  ${2})
+START_DAY=$(cut -d- -f 3 <<<  ${2})
+START_HOUR=$(cut -d- -f 4 <<<  ${2})
+START_DATE_TIME=${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}
+
+
 
 ## DEBUG
 f_debug $0 START_DATE_TIME $START_DATE_TIME
@@ -179,30 +182,7 @@ cat << End_Of_Namelist > ./namelist.input
  io_form_input                       = 2,
  io_form_boundary                    = 2,
  !  Prints debug info:0(default),50,100,200,300 values give increasing prints
- debug_level                         = 200,
- 
- auxhist2_interval                   = 60, 60, 60,
- io_form_auxhist2                    = 2,
- auxhist2_outname                    = "radar_domain.${START_DATE_TIME}.grb",
- frames_per_auxhist2                 = 1, 1, 1,
- io_form_auxinput4                   = 2,
- auxinput4_interval                  = 60, 60, 60,
- auxinput4_inname                    = "wrflowinp_d<domain>",
- io_form_auxhist23                   = 2,
- auxhist23_interval                  = 60, 60, 60,
- frames_per_auxhist23                = 180,  60,    60, 
- auxhist23_outname                   = "WRF-out-diagnostics_PLEVELS_domain_${START_DATE_TIME}.grb",
- !iofields_filename                   = "diag_var_list_d01.txt", "diag_var_list_d02.txt", "diag_var_list_d03.txt",
- ignore_iofields_warning             = .true. 
- io_form_auxhist22                   =  2,
- auxhist22_interval                  = 60, 60, 60,
- frames_per_auxhist22                =  180,  60,    60, 
- auxhist22_outname                   = "WRF-out-diagnostics_ZLEVELS_domain_${START_DATE_TIME}.grb",
- 
- ! auxhist1_interval = 
- ! for diag_nwp2 = 1
- ! auxhist1_outname         = "diags.d<domain>.<date>"
- ! The code expects that exact format - it's not meant for you to fill in the domain and actual date you're using. Other than that, it looks okay.
+ debug_level                         = 0, 
  /
  
 
@@ -242,7 +222,7 @@ cat << End_Of_Namelist > ./namelist.input
  ra_sw_physics                       = 4,     4,     4,
  radt                                = 15,    15,    15,
  sf_sfclay_physics                   = 1,     1,     1,
- sf_surface_physics                  = 4,     4,     4,
+ sf_surface_physics                  = 2,     2,     2,
  bl_pbl_physics                      = ${_BL_PBL_PHYSICS_1}, ${_BL_PBL_PHYSICS_2}, ${_BL_PBL_PHYSICS_3},
  num_soil_layers                     = 4, 
  bldt                                = 0,     0,     0,
@@ -326,21 +306,6 @@ cat << End_Of_Namelist > ./namelist.input
  z_levels                        = 600, 180,
  /
  
- &afwa
- afwa_diag_opt              = 0, 1, 1,
- afwa_ptype_opt             = 0, 1, 1,
- afwa_vil_opt               = 0, 1, 1,
- afwa_radar_opt             = 0, 1, 1,
- afwa_severe_opt            = 0, 1, 1,
- afwa_icing_opt             = 0, 0, 0,
- afwa_vis_opt               = 0, 0, 0,
- afwa_cloud_opt             = 0, 0, 0,
- afwa_therm_opt             = 0, 0, 0,
- afwa_turb_opt              = 0, 0, 0,
- afwa_buoy_opt              = 1, 1, 1,
- afwa_ptype_ccn_tmp         = 264.15,
- afwa_ptype_tot_melt        = 50,
- /
 
 End_Of_Namelist
 
