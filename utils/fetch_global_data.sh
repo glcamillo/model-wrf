@@ -1,7 +1,7 @@
-#!/bin/bash -x
+#!/bin/bash
 #
 #  Encoding: UTF-8
-#  Last revision: 2022-05-18
+#  Last revision: 2022-12-27
 #  
 #  fetch_global_data.sh: fetch the files resulted from execution of global model (GFS, etc)
 #
@@ -245,20 +245,20 @@ if [ ${GD_SOURCE} = "cptec_wrf_5km" ]; then
                     F_LENGTH=$(du -k "$1/WRF_cpt_05KM_${START_DATE_TIME}_${END_YEAR}${END_MONTH}${END_DAY}${END_HOUR}.grib2" | cut -f1 2>/dev/null)
                     
                     if [ $F_LENGTH -gt $F_MIN_LENGTH_GD_00 ]; then
-                        echo "Arquivo "$1/WRF_cpt_05KM_${START_DATE_TIME}_${END_YEAR}${END_MONTH}${END_DAY}${END_HOUR}.grib2" copiado."
+                        echo "File copied: "$1/WRF_cpt_05KM_${START_DATE_TIME}_${END_YEAR}${END_MONTH}${END_DAY}${END_HOUR}.grib2""
                         COPIADOS=0
                     fi
                 else
                     F_LENGTH=$(du -k "$1/WRF_cpt_05KM_${START_DATE_TIME}_${END_YEAR}${END_MONTH}${END_DAY}${END_HOUR}.grib2" | cut -f1 2>/dev/null)
                     
                     if [ $F_LENGTH -gt $F_MIN_LENGTH_GD ]; then
-                        echo "Arquivo "$1/WRF_cpt_05KM_${START_DATE_TIME}_${END_YEAR}${END_MONTH}${END_DAY}${END_HOUR}.grib2" copiado."
+                        echo "File copied: "$1/WRF_cpt_05KM_${START_DATE_TIME}_${END_YEAR}${END_MONTH}${END_DAY}${END_HOUR}.grib2""
                         COPIADOS=0
                     fi
                 fi
             else
                 COPIADOS=1
-                echo "Arquivo "$1/WRF_cpt_05KM_${START_DATE_TIME}_${END_YEAR}${END_MONTH}${END_DAY}${END_HOUR}.grib2" NÂO COPIADO."
+                echo "File NOT copied: "$1/WRF_cpt_05KM_${START_DATE_TIME}_${END_YEAR}${END_MONTH}${END_DAY}${END_HOUR}.grib2"."
                 wget -c -a wget-cptec-wrf-${START_DATE_TIME}.log http://ftp.cptec.inpe.br/modelos/tempo/WRF/ams_05km/brutos/${START_YEAR}/${START_MONTH}/${START_DAY}/${START_HOUR}/WRF_cpt_05KM_${START_DATE_TIME}_${END_YEAR}${END_MONTH}${END_DAY}${END_HOUR}.grib2
             fi
             
@@ -273,7 +273,7 @@ if [ ${GD_SOURCE} = "cptec_wrf_5km" ]; then
                 
                 # We reached hour 24: need to update the date for the next day
                 if [ $END_HOUR -ge 24 ]; then
-                    END_HOUR=$(($END_HOUR - 24))
+                    END_HOUR=$((10#$END_HOUR - 24))
                     END_DATE=$(date +%Y%m%d  --date="${END_YEAR}${END_MONTH}${END_DAY} +1 day")
                     ## DEBUG
                     f_debug $0 END_HOUR $END_HOUR

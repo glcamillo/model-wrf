@@ -1,7 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Enc: UTF-8
-# Last revision: 2022-03-13
+# Last revision: 2022-12-27
 
 #
 # namelist.ARWpost.sh

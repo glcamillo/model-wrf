@@ -1,23 +1,13 @@
 #!/bin/bash
 #
 #  Encoding UTF-8
-#  Last revision: 2022-07-06
-#  Obs.: these scripts uses features from Bash that are not found in other versions of sh.
-
+#  Last revision: 2022-12-27
 
 # runwrf.sh: this is the main script that executes the routines for the WRF model.
 #
-#  Versions and changelogs (more detailed in the Readme.md):
-#    0.1 (2009): this script was aimed to automatize the WRF model routines; this
-#                was based on the script that executed the MM5 model.
-#    This script and the others went through several revisions/versions 
-#    4.0 (2021-10-12): this script enters in revision.
-#    4.1 (2022-02-10): the model is running now, but there is still more
-#                      development and testing to go
+
 # ----------------------------------------
-
-
-#  Command line parameters for script execution (basic info; more in Readme.md)
+#  Command line parameters (basic info; more in Readme.md)
 #  ./runwrf.sh -conf A -ts 2022-01-01-12 -ti 24 -gtr 3 -np 4 -gd gfs0p50
 #    -conf A : domain configuration A
 #    -ts 2022-01-01-12 : date-time of start of simulation
@@ -32,6 +22,15 @@
 # Or call for help: ./runwrf.sh --help
 # ----------------------------------------
 
+# ----------------------------------------
+#  Versions and changelogs (more detailed in the Readme.md):
+#    0.1 (2009): this script was aimed to automatize the WRF
+#                model routines; this was based on the script
+#                that executed the MM5 model.
+#    4.0 (2021-10-12): this script enters in revision.
+#    4.1 (2022-02-10): the model is running now, but there is
+#                 still more development and testing to go
+# ----------------------------------------
 
 # Set debugging messages (variable tracking)
 # DEBUG=1 # debug ON
@@ -1113,7 +1112,7 @@ case $CONFIG in
 
 
 
-[lL]) # 3 domains - South America - Sãoo Paulo - São José dos Campos 
+[lL]) # 3 domains - South America - São Paulo - São José dos Campos 
         CONFIG_NAME="americasul-r_sudeste-SP-sjcampos-3d"
         
         export _MAX_DOMAIN=3
@@ -1207,69 +1206,69 @@ function t_calcular_data_hora_final
     
     if [ x"${RUN_TIME_HOURS}" = x"24" ]
     then
-        RESULT=$( expr ${START_DAY} + 1 )
+        RESULT=$( expr $START_DAY + 1 )
         END_DAY=$(printf %02d $RESULT)
     fi
         
     if [ x"${RUN_TIME_HOURS}" = x"48" ]
     then
-        RESULT=$( expr ${START_DAY} + 2 )
+        RESULT=$( expr $START_DAY + 2 )
         END_DAY=$(printf %02d $RESULT)
     fi
         
 
     if [ x"${RUN_TIME_HOURS}" = x"72" ]
     then
-        RESULT=$( expr ${START_DAY} + 3 )
+        RESULT=$( expr $START_DAY + 3 )
         END_DAY=$(printf %02d $RESULT)
     fi
 
     # Month: FEBRUARY
     # LEAP YEAR:
-    RESULT=$( expr ${START_YEAR} % 4 )
+    RESULT=$( expr $START_YEAR % 4 )
     LEAP="no"
     [ $RESULT -eq 0 ] && LEAP="yes"
     
-    if [ x"${START_MONTH}" = x"02" ] && [ ${LEAP} == "yes" ]; then
-        [ "${END_DAY}" -eq 29 ] && END_MONTH="02"
-        [ "${END_DAY}" -gt 30 ] && END_MONTH="03"
-    elif [ x"${START_MONTH}" = x"02" ] && [ ${LEAP} == "no" ]; then        
-        [ "${END_DAY}" -ge 29 ] && END_MONTH="03"
+    if [ x"$START_MONTH" = x"02" ] && [ $LEAP == "yes" ]; then
+        [ "$END_DAY" -eq 29 ] && END_MONTH="02"
+        [ "$END_DAY" -gt 30 ] && END_MONTH="03"
+    elif [ x"$START_MONTH" = x"02" ] && [ $LEAP == "no" ]; then        
+        [ "$END_DAY" -ge 29 ] && END_MONTH="03"
         END_DAY=$(printf %02d 01)
     fi
 
     # Month (30 days): april, june, september, november
-    if [ x"${START_MONTH}" = x"04" -o x"${START_MONTH}" = x"06" -o x"${START_MONTH}" = x"09" -o x"${START_MONTH}" = x"11" ]; then 
-        if [ ${END_DAY} -ge 31 ]; then
-            RESULT=$( expr ${START_MONTH} + 1 )
-            END_MONTH=$(printf %02d ${RESULT})
+    if [ x"$START_MONTH" = x"04" -o x"$START_MONTH" = x"06" -o x"$START_MONTH" = x"09" -o x"$START_MONTH" = x"11" ]; then 
+        if [ $END_DAY -ge 31 ]; then
+            RESULT=$( expr $START_MONTH + 1 )
+            END_MONTH=$(printf %02d $RESULT)
             
-            RESULT=$( expr ${END_DAY} - 30 )
+            RESULT=$( expr $END_DAY - 30 )
             END_DAY=$(printf %02d $RESULT)
         fi
     fi
 
     # Month (31 days): january, march, may, july, august, october
-    if [ x"${START_MONTH}" = x"01" -o x"${START_MONTH}" = x"03" -o x"${START_MONTH}" = x"05" -o x"${START_MONTH}" = x"07" -o  x"${START_MONTH}" = x"08" -o x"${START_MONTH}" = x"10" ]; then
-        if [ ${END_DAY} -ge 32 ]; then
-            RESULT=$( expr ${START_MONTH} + 1 )
-            END_MONTH=$(printf %02d ${RESULT})
+    if [ x"$START_MONTH" = x"01" -o x"$START_MONTH" = x"03" -o x"$START_MONTH" = x"05" -o x"$START_MONTH" = x"07" -o  x"$START_MONTH" = x"08" -o x"$START_MONTH" = x"10" ]; then
+        if [ $END_DAY -ge 32 ]; then
+            RESULT=$( expr $START_MONTH + 1 )
+            END_MONTH=$(printf %02d $RESULT)
             
-            RESULT=$( expr ${START_DAY} - 31 )
+            RESULT=$( expr $END_DAY - 31 )
             END_DAY=$(printf %02d $RESULT)
         fi
     fi    
 
 
     # Month (31 days): december
-    if [ x"${START_MONTH}" = x"12" ]; then
-        if [ ${START_DAY} -ge 32 ]; then
-            RESULT=$( expr ${START_YEAR} + 1 )
+    if [ x"$START_MONTH" = x"12" ]; then
+        if [ $START_DAY -ge 32 ]; then
+            RESULT=$( expr $START_YEAR + 1 )
             END_YEAR=$(printf %02d $RESULT)
 
             END_MONTH="01"
 
-            RESULT=$( expr ${START_DAY} - 31 )
+            RESULT=$( expr $END_DAY - 31 )
             END_DAY=$(printf %02d $RESULT)
         fi
     fi    
@@ -1295,7 +1294,7 @@ if [ $DH_HOW_RUN_SCRIPT = "AUTOMATIC" ]; then
     # HOUR=$1 ideally, this information need to be passed via command line
     #         parameter
     HOUR=12
-    YEAR=`date +%Y` ; MONTH=`date +%m` ; DAY=`date +%d`
+    YEAR=$(date +%Y) ; MONTH=$(date +%m) ; DAY=$(date +%d)
     START_YEAR=$YEAR ; START_MONTH=$MONTH ; START_DAY=$DAY ; START_HOUR=$HOUR
     opcoes_rodada
 fi
@@ -1633,7 +1632,7 @@ fi
 #   Do not declare int (-i), because month 2 need to appear as 02
 declare END_YEAR END_MONTH END_DAY END_HOUR 
 
-t_calcular_data_hora_final ${START_YEAR} ${START_MONTH} ${START_DAY} ${START_HOUR}
+t_calcular_data_hora_final $START_YEAR $START_MONTH $START_DAY $START_HOUR
 
 ## DEBUG
 f_debug $0 START_DATE_TIME ${START_YEAR}-${START_MONTH}-${START_DAY}-${START_HOUR}
@@ -1752,7 +1751,7 @@ if [ $USE_ALTERNATE_DATA == "no" ]; then
     # If there were an a error, we will try again, until 5 times
     for i in {1..5}
     do
-        ${CURRENT_DIR}/utils/fetch_global_data.sh  ${DIR_WPS_INPUT} ${START_YEAR}-${START_MONTH}-${START_DAY}-${START_HOUR} ${RUN_TIME_HOURS} ${GLOBAL_DATE_TIME_INTERVAL} ${GLOBAL_DATA}
+        $CURRENT_DIR/utils/fetch_global_data.sh  ${DIR_WPS_INPUT} ${START_YEAR}-${START_MONTH}-${START_DAY}-${START_HOUR} ${RUN_TIME_HOURS} ${GLOBAL_DATE_TIME_INTERVAL} ${GLOBAL_DATA}
         status=$(echo $?)
     done
 
@@ -1781,15 +1780,12 @@ if [ ! -d $GEODATA_PATH ]; then
 fi
 
 
-if [ ! -d ${WPS_PATH}/data ]; then
-    mkdir -p ${WPS_PATH}/data
-    #  Em 18jul10: vamos deixar para apagar depois.
-    #  rm -rf $WPS_PATH/data/*
+if [ ! -d $WPS_PATH/data ]; then
+    mkdir -p $WPS_PATH/data
 fi
 
-# Em 18jul10: se não houver o diretório então há duas opções
-if [ ! -d ${DIR_WRF_OUTPUT} ]; then
-    mkdir -p ${DIR_WRF_OUTPUT}
+if [ ! -d $DIR_WRF_OUTPUT ]; then
+    mkdir -p $DIR_WRF_OUTPUT
 fi
 
 
@@ -1897,15 +1893,14 @@ fi #  if [ x$USE_STATIC_NAMELIST_FILES == x"no" ]; then
 # ========================================================
 
 
-status=$(cat ${DIR_WRF_OUTPUT}/status-components-out-execution.log | grep "GEOGRID" | cut -d' ' -f2)
+status=$(cat $DIR_WRF_OUTPUT/status-components-out-execution.log | grep "GEOGRID" | cut -d' ' -f2)
 if [ $status -ne 0 ] && [ $USE_STATIC_GEOGRID = "no" ]; then
     mensagem ">>>>>>> Program geogrid.exe (STARTING)"
-    #  Em 18jul10: como estamos começando tudo do início, apagaremos o conteúdo.
-    rm -rf ${WPS_PATH}/data/* 2>/dev/null
+    rm -rf $WPS_PATH/data/* 2>/dev/null
 
     cd $WPS_PATH
-    if [ -e ${WPS_PATH}/geogrid/GEOGRID.TBL ]; then
-      rm -f ${WPS_PATH}/geogrid/GEOGRID.TBL 2>/dev/null
+    if [ -e $WPS_PATH/geogrid/GEOGRID.TBL ]; then
+      rm -f $WPS_PATH/geogrid/GEOGRID.TBL 2>/dev/null
     fi
     
     # TODO TODO
@@ -1975,10 +1970,10 @@ if [ $status -ne 0 ]; then
     mensagem ">>>>>>> Program ungrib.exe (STARTING)"
     cd ${WPS_PATH}
     
-    cp ${CURRENT_DIR}/wps/executes_ungrib.sh ${WPS_PATH}
-    chmod u+x ${WPS_PATH}/executes_ungrib.sh
-    cp ${CURRENT_DIR}/wps/link_grib.csh ${WPS_PATH}
-    chmod u+x ${WPS_PATH}/link_grib.csh
+    cp $CURRENT_DIR/wps/executes_ungrib.sh $WPS_PATH
+    chmod u+x $WPS_PATH/executes_ungrib.sh
+    cp $CURRENT_DIR/wps/link_grib.csh $WPS_PATH
+    chmod u+x $WPS_PATH/link_grib.csh
     
     # 20220201: the script executes_ungrib.sh expects:
     #  $1 : directory of global data
@@ -2051,18 +2046,18 @@ if [ x$USE_STATIC_NAMELIST_FILES == x"no" ]; then
         #    $3 : run time length of forecast (in hours): 24, 48, 72
         #    $4 : temporal interval in which the input data are available (time step of global data, in hours): 1 (cptec-wrf), 3 (gfs), 6 (gfs)
 
-    if [ ${GEN_WRFOUT_DIAGS_AFWA} -eq 1 ]; then
-        cp ${CURRENT_DIR}/wrf/namelist.input.wrf.afwa-diags.sh  ${WRF_PATH}/test/em_real/namelist.input.wrf.sh
+    if [ $GEN_WRFOUT_DIAGS_AFWA -eq 1 ]; then
+        cp $CURRENT_DIR/wrf/namelist.input.wrf.afwa-diags.sh  $WRF_PATH/test/em_real/namelist.input.wrf.sh
     else
-        cp ${CURRENT_DIR}/wrf/namelist.input.wrf.sh  ${WRF_PATH}/test/em_real/namelist.input.wrf.sh
+        cp $CURRENT_DIR/wrf/namelist.input.wrf.sh  $WRF_PATH/test/em_real/namelist.input.wrf.sh
 
     # Apagar o arquivo (link) namelis.input anterior
-    if [ -e ${WRF_PATH}/test/em_real/namelist.input ]; then
-        rm -f ${WRF_PATH}/test/em_real/namelist.input 2>/dev/null
+    if [ -e $WRF_PATH/test/em_real/namelist.input ]; then
+        rm -f $WRF_PATH/test/em_real/namelist.input 2>/dev/null
     fi
 
     # Program ncdump: we will use the one provided by instalation of NetCDF4)
-    NUM_METGRID_LEVELS=$($NCDUMP -h ${WPS_PATH}/data/met_em.d01.${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}:00:00.nc | grep num_metgrid_levels | head -n1 | cut -d' ' -f 3)
+    NUM_METGRID_LEVELS=$($NCDUMP -h "${WPS_PATH}/data/met_em.d01.${START_YEAR}-${START_MONTH}-${START_DAY}_${START_HOUR}:00:00.nc" | grep num_metgrid_levels | head -n1 | cut -d' ' -f 3)
     status=$?
 
     ## DEBUG
