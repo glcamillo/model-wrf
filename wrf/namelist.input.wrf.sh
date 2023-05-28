@@ -1,7 +1,7 @@
 #!/bin/bash -f
 #
 #  Encoding: UTF-8
-#  Last revision: 2022-06-13
+#  Last revision: 2023-02-24
 #  
 #  namelist.input.wrf.sh : build the Namelist for WRF program.
 #    Used by:  WRF/run/real.exe and WRF/run/wrf.exe
@@ -51,6 +51,17 @@
 
 #   20211012: start reviewing to follow the WRF version 4.3
 #   20220210: the model-wrf is running (not all tested)
+#   20230222: modification of values (old values: dzstretch_s= 1.3,dzstretch_u=1.1)
+
+###################################################################
+# The namelist &diags requires
+# p_lev_diags requires auxhist23 file information
+#    auxhist23_interval (max_dom) and io_form_auxhist23
+7
+# &diags
+# !  diag_nwp2 = 1
+# p_lev_diags                     = 1,
+# num_press_levels                = 5,
 
 ###################################################################
 
@@ -211,8 +222,8 @@ cat << End_Of_Namelist > ./namelist.input
  max_dz                              = 1000.,
  auto_levels_opt                     = 2,
  dzbot                               = 50.,
- dzstretch_s                         = 1.3,
- dzstretch_u                         = 1.1,
+ dzstretch_s                         = 1.2,
+ dzstretch_u                         = 1.06,
 
  /
 
@@ -292,18 +303,7 @@ cat << End_Of_Namelist > ./namelist.input
  nio_tasks_per_group = 0,
  nio_groups = 1,
  /
- 
- &diags
- !  diag_nwp2 = 1
- p_lev_diags                     = 1,
- num_press_levels                = 5,
- press_levels                    = 100000, 85000, 70000, 50000, 20000,
- use_tot_or_hyd_p                = 2,
- extrap_below_grnd               = 2,
- p_lev_missing                   = 1e10,
- z_lev_diags                     = 1,
- num_z_levels                    = 2,
- z_levels                        = 600, 180,
+
  /
  
 

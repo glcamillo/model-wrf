@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 #  Encoding UTF-8
-#  Last revision: 2022-12-27
+#  Last revision: 2023-02-22
 
 # runwrf.sh: this is the main script that executes the routines for the WRF model.
 #
@@ -60,7 +60,7 @@ declare -u CONFIG="A"  # receives only uppercase letters
 #   model-wrf/post_processing/generate_output_graphics.sh
 
 # This is for AFWA diagnostics output
-declare -i GEN_WRFOUT_DIAGS_AFWA=1
+declare -i GEN_WRFOUT_DIAGS_AFWA=0
 
 COMPILADOR=GFORTRAN
 
@@ -91,6 +91,9 @@ GLOBAL_DATA_SOURCE=gfs
 #      will read the global data dir from user and set the variable
 USE_ALTERNATE_DATA="no"     # Default
 
+# This option can be used to create new run [wrf-a -> wrf-b, e.g.], independently
+#    of the previous configuration (wrf-a, for example).
+USE_NEW_RUN="no"    # Tried to execute the last configuration (wrf-a, e.g.)
 
 # Setting as a global variables
 DIR_WRF_OUTPUT=""
@@ -189,7 +192,7 @@ function help
     echo " [--use-static-config ] : the script will use the namelist files in their directories. Only need provide the mandatory parameters to verify DIR and INPUT DATA - default: use dynamic generation of the namelist files."
     # TODO TODO
     echo " [--use-alternate-date : use alternate data: the user must indicate the input data dir. ]"
-
+    echo " [--new-run : new config run (wrf-*) where * is a letter for the next, independently of the result of last run. ]"
     echo " "
     echo " -h|--help : for help"
     echo " -conf -h : for help about domain configurations (not yet implemented)"
@@ -482,10 +485,11 @@ case $CONFIG in
         export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
         export _CU_PHYSICS_1=16; _CU_PHYSICS_2=16; _CU_PHYSICS_3=0;
         
-        export _E_VERT=42  # Number o vertical levels. The levels are
+        export _E_VERT=41  # Number o vertical levels. The levels are
                            #   automatically calculated (auto_levels_opt=2)
-                           #   stretching in lower and in top of the atmosphere.   
-
+                           #   stretching in lower and in top of the atmosphere.
+                           # Minimum number of levels when dzstretch_s and dzstretch_u in namelist.input
+                           # dzstretch(dzstretch_s-dzstretch_u)=1.2-1.06  => 41 for ptop=50
 ;;
 
 [bB]) # ****************************
@@ -542,10 +546,11 @@ case $CONFIG in
         export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
         export _CU_PHYSICS_1=16; _CU_PHYSICS_2=16; _CU_PHYSICS_3=0;
         
-        export _E_VERT=42  # Number o vertical levels. The levels are
+        export _E_VERT=41  # Number o vertical levels. The levels are
                            #   automatically calculated (auto_levels_opt=2)
-                           #   stretching in lower and in top of the atmosphere.    
-       
+                           #   stretching in lower and in top of the atmosphere.
+                           # Minimum number of levels when dzstretch_s and dzstretch_u in namelist.input
+                           # dzstretch(dzstretch_s-dzstretch_u)=1.2-1.06  => 41 for ptop=50
 ;;
 
 
@@ -605,12 +610,11 @@ case $CONFIG in
         export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
         export _CU_PHYSICS_1=16; _CU_PHYSICS_2=0; _CU_PHYSICS_3=0;
 
-        
-        export _E_VERT=42  # Number o vertical levels. The levels are
+        export _E_VERT=41  # Number o vertical levels. The levels are
                            #   automatically calculated (auto_levels_opt=2)
-                           #   stretching in lower and in top of the atmosphere.   
-
-
+                           #   stretching in lower and in top of the atmosphere.
+                           # Minimum number of levels when dzstretch_s and dzstretch_u in namelist.input
+                           # dzstretch(dzstretch_s-dzstretch_u)=1.2-1.06  => 41 for ptop=50
 ;;
 [dD])
         CONFIG_NAME="santa-catarina-1d-high"
@@ -667,11 +671,11 @@ case $CONFIG in
         export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
         export _CU_PHYSICS_1=0; _CU_PHYSICS_2=0; _CU_PHYSICS_3=0
         
-        export _E_VERT=42  # Number o vertical levels. The levels are
+        export _E_VERT=41  # Number o vertical levels. The levels are
                            #   automatically calculated (auto_levels_opt=2)
-                           #   stretching in lower and in top of the atmosphere.    
-
-       
+                           #   stretching in lower and in top of the atmosphere.
+                           # Minimum number of levels when dzstretch_s and dzstretch_u in namelist.input
+                           # dzstretch(dzstretch_s-dzstretch_u)=1.2-1.06  => 41 for ptop=50
 ;;
 [eE])
         CONFIG_NAME="santa-catarina-1d-high-small"
@@ -729,11 +733,11 @@ case $CONFIG in
         export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
         export _CU_PHYSICS_1=0; _CU_PHYSICS_2=0; _CU_PHYSICS_3=0
 
-        
-        export _E_VERT=42  # Number o vertical levels. The levels are
+        export _E_VERT=41  # Number o vertical levels. The levels are
                            #   automatically calculated (auto_levels_opt=2)
-                           #   stretching in lower and in top of the atmosphere.    
-
+                           #   stretching in lower and in top of the atmosphere.
+                           # Minimum number of levels when dzstretch_s and dzstretch_u in namelist.input
+                           # dzstretch(dzstretch_s-dzstretch_u)=1.2-1.06  => 41 for ptop=50
 ;;
 [fF])
         CONFIG_NAME="santa-catarina-1d-low-small"
@@ -791,12 +795,11 @@ case $CONFIG in
         export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
         export _CU_PHYSICS_1=0; _CU_PHYSICS_2=0; _CU_PHYSICS_3=0
 
-        
-        export _E_VERT=42  # Number o vertical levels. The levels are
+        export _E_VERT=41  # Number o vertical levels. The levels are
                            #   automatically calculated (auto_levels_opt=2)
-                           #   stretching in lower and in top of the atmosphere.  
-
-
+                           #   stretching in lower and in top of the atmosphere.
+                           # Minimum number of levels when dzstretch_s and dzstretch_u in namelist.input
+                           # dzstretch(dzstretch_s-dzstretch_u)=1.2-1.06  => 41 for ptop=50
 ;;
 
 [gG]) # ****************************
@@ -853,11 +856,11 @@ case $CONFIG in
         export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
         export _CU_PHYSICS_1=16; _CU_PHYSICS_2=0; _CU_PHYSICS_3=0
 
-        
-        export _E_VERT=42  # Number o vertical levels. The levels are
+        export _E_VERT=41  # Number o vertical levels. The levels are
                            #   automatically calculated (auto_levels_opt=2)
-                           #   stretching in lower and in top of the atmosphere.    
-       
+                           #   stretching in lower and in top of the atmosphere.
+                           # Minimum number of levels when dzstretch_s and dzstretch_u in namelist.input
+                           # dzstretch(dzstretch_s-dzstretch_u)=1.2-1.06  => 41 for ptop=50
 ;;
 
 [hH]) # Área de Sao Paulo
@@ -917,12 +920,11 @@ case $CONFIG in
         export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
         export _CU_PHYSICS_1=16; _CU_PHYSICS_2=16; _CU_PHYSICS_3=16;
 
-        
-        export _E_VERT=42  # Number o vertical levels. The levels are
+        export _E_VERT=41  # Number o vertical levels. The levels are
                            #   automatically calculated (auto_levels_opt=2)
-                           #   stretching in lower and in top of the atmosphere.    
-
-    
+                           #   stretching in lower and in top of the atmosphere.
+                           # Minimum number of levels when dzstretch_s and dzstretch_u in namelist.input
+                           # dzstretch(dzstretch_s-dzstretch_u)=1.2-1.06  => 41 for ptop=50
 ;;
 [iI]) # América do Sul -> Maranhão
         CONFIG_NAME="americasul-r_norte-MA-3d"       
@@ -978,11 +980,11 @@ case $CONFIG in
         export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
         export _CU_PHYSICS_1=16; _CU_PHYSICS_2=16; _CU_PHYSICS_3=16;
 
-        
-        export _E_VERT=42  # Number o vertical levels. The levels are
+        export _E_VERT=41  # Number o vertical levels. The levels are
                            #   automatically calculated (auto_levels_opt=2)
-                           #   stretching in lower and in top of the atmosphere.    
-
+                           #   stretching in lower and in top of the atmosphere.
+                           # Minimum number of levels when dzstretch_s and dzstretch_u in namelist.input
+                           # dzstretch(dzstretch_s-dzstretch_u)=1.2-1.06  => 41 for ptop=50
 ;;
 
 [jJ]) # Regiões Norte e Nordeste -> Maranhão
@@ -1040,10 +1042,11 @@ case $CONFIG in
         export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
         export _CU_PHYSICS_1=16; _CU_PHYSICS_2=16; _CU_PHYSICS_3=0;
         
-        export _E_VERT=42  # Number o vertical levels. The levels are
+        export _E_VERT=41  # Number o vertical levels. The levels are
                            #   automatically calculated (auto_levels_opt=2)
-                           #   stretching in lower and in top of the atmosphere.   
-
+                           #   stretching in lower and in top of the atmosphere.
+                           # Minimum number of levels when dzstretch_s and dzstretch_u in namelist.input
+                           # dzstretch(dzstretch_s-dzstretch_u)=1.2-1.06  => 41 for ptop=50
 ;; 
 
 
@@ -1102,11 +1105,11 @@ case $CONFIG in
         export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
         export _CU_PHYSICS_1=16; _CU_PHYSICS_2=16; _CU_PHYSICS_3=0;
 
-        
-        export _E_VERT=42  # Number o vertical levels. The levels are
+        export _E_VERT=41  # Number o vertical levels. The levels are
                            #   automatically calculated (auto_levels_opt=2)
-                           #   stretching in lower and in top of the atmosphere.   
-
+                           #   stretching in lower and in top of the atmosphere.
+                           # Minimum number of levels when dzstretch_s and dzstretch_u in namelist.input
+                           # dzstretch(dzstretch_s-dzstretch_u)=1.2-1.06  => 41 for ptop=50
 ;;
 
 
@@ -1157,8 +1160,12 @@ case $CONFIG in
         export _MP_PHYSICS_1=5; export _MP_PHYSICS_2=5;  export _MP_PHYSICS_3=5
         export _BL_PBL_PHYSICS_1=1; export _BL_PBL_PHYSICS_2=1; export _BL_PBL_PHYSICS_3=1
         export _CU_PHYSICS_1=16; _CU_PHYSICS_2=16; _CU_PHYSICS_3=16;
-        export _E_VERT=42
 
+        export _E_VERT=41  # Number o vertical levels. The levels are
+                           #   automatically calculated (auto_levels_opt=2)
+                           #   stretching in lower and in top of the atmosphere.
+                           # Minimum number of levels when dzstretch_s and dzstretch_u in namelist.input
+                           # dzstretch(dzstretch_s-dzstretch_u)=1.2-1.06  => 41 for ptop=50
 ;;
 
 
@@ -1439,8 +1446,14 @@ f_last_completed_configuration ()
 # Em 02jan22: this function will set the next run config for THE SAME DOMAIN CONFIG
 #             The aim is to have different directories for different physical
 #             configurations for the same domain/initial date-hour configuration.
-#   DIR_DOMAIN_OUTPUT=yyyy-mm-dd-HH_dom_[A-Z]-["short name of config domain"]
-#   DIR_WRF_OUTPUT=${DIR_DATA_OUTPUT}/${DIR_DOMAIN_OUTPUT}/wrf-[a-z]
+#  Parameters
+#    $1:${DIR_DOMAIN_OUTPUT}
+#    $2:$USE_STATIC_NAMELIST_FILES
+#    $3:$USE_NEW_RUN (new on 20230222)
+#  Configuration of the filenames:
+#    DIR_DOMAIN_OUTPUT=yyyy-mm-dd-HH_dom_[A-Z]-["short name of config domain"]
+#    DIR_WRF_OUTPUT=${DIR_DATA_OUTPUT}/${DIR_DOMAIN_OUTPUT}/wrf-[a-z]
+
 f_find_next_execution_round  ()
 {
         # Diretorio com os dados de saida do modelo (grade) corrente.
@@ -1471,8 +1484,7 @@ f_find_next_execution_round  ()
         
         # Obtain the next letter for the next round
         # If $USE_STATIC_NAMELIST_FILES == "yes" we also need new output dir.
-        if [ $status -eq 0 ] || [ x$2 == x"yes" ] ; then
-            echo "Configuração anterior executada com SUCESSO"
+        if [ $status -eq 0 ] || [ x$2 == x"yes" ] || [ x$3 == x"yes" ]; then
             ASCII_ORD=$(echo ${VAL_LAST_LETTER_CONF} | tr -d "\n" | od -An -t uC)
             ASCII_ORD=$(( $ASCII_ORD + 1 ))
             NEXT_LETTER=$( printf "\U$(printf %08x $ASCII_ORD)" )
@@ -1591,6 +1603,8 @@ while [ "$1" != "" ]; do
                                 ;;
         --use-alternate-data )  USE_ALTERNATE_DATA=$(echo "yes")
                                 ;;
+        --new-run )             USE_NEW_RUN=$(echo "yes")
+                                ;;
         -h | --help )           help
                                 shutdown_execution " " 0
                                 ;;
@@ -1700,7 +1714,7 @@ mensagem ">>>>>>> Configuration of the next round for the same CONFIG value   (S
 declare -l VAL_LAST_LETTER_CONF="a"   # Declare the var as lowercase
 
 #STATUS=$(f_find_next_execution_round ${DIR_DOMAIN_OUTPUT})
-f_find_next_execution_round ${DIR_DOMAIN_OUTPUT} $USE_STATIC_NAMELIST_FILES
+f_find_next_execution_round ${DIR_DOMAIN_OUTPUT} $USE_STATIC_NAMELIST_FILES $USE_NEW_RUN
 if [[ $? -eq 0 ]]; then
     mensagem " WRF Model Output DIR: ${DIR_WRF_OUTPUT} "
 else
@@ -2046,11 +2060,6 @@ if [ x$USE_STATIC_NAMELIST_FILES == x"no" ]; then
         #    $3 : run time length of forecast (in hours): 24, 48, 72
         #    $4 : temporal interval in which the input data are available (time step of global data, in hours): 1 (cptec-wrf), 3 (gfs), 6 (gfs)
 
-    if [ $GEN_WRFOUT_DIAGS_AFWA -eq 1 ]; then
-        cp $CURRENT_DIR/wrf/namelist.input.wrf.afwa-diags.sh  $WRF_PATH/test/em_real/namelist.input.wrf.sh
-    else
-        cp $CURRENT_DIR/wrf/namelist.input.wrf.sh  $WRF_PATH/test/em_real/namelist.input.wrf.sh
-
     # Apagar o arquivo (link) namelis.input anterior
     if [ -e $WRF_PATH/test/em_real/namelist.input ]; then
         rm -f $WRF_PATH/test/em_real/namelist.input 2>/dev/null
@@ -2070,12 +2079,19 @@ if [ x$USE_STATIC_NAMELIST_FILES == x"no" ]; then
 
     cd ${WRF_PATH}/test/em_real/ 2>/dev/null
 
-    chmod u+x ${WRF_PATH}/test/em_real/namelist.input.wrf.sh
-
-        
-    ./namelist.input.wrf.sh ${NUM_METGRID_LEVELS} ${START_YEAR}-${START_MONTH}-${START_DAY}-${START_HOUR}  ${END_YEAR}-${END_MONTH}-${END_DAY}-${END_HOUR}  ${RUN_TIME_HOURS} ${GLOBAL_DATE_TIME_INTERVAL}
-    # First, save the status of execution, and,
-    status=$?
+    if [ $GEN_WRFOUT_DIAGS_AFWA -eq 1 ]; then
+        cp $CURRENT_DIR/wrf/namelist.input.wrf.afwa-diags.sh  $WRF_PATH/test/em_real/namelist.input.wrf.sh
+        chmod u+x ${WRF_PATH}/test/em_real/namelist.input.wrf.afwa-diags.sh
+        ./namelist.input.wrf.afwa-diags.sh ${NUM_METGRID_LEVELS} ${START_YEAR}-${START_MONTH}-${START_DAY}-${START_HOUR}  ${END_YEAR}-${END_MONTH}-${END_DAY}-${END_HOUR}  ${RUN_TIME_HOURS} ${GLOBAL_DATE_TIME_INTERVAL}
+        # First, save the status of execution
+        status=$?
+    else
+        cp $CURRENT_DIR/wrf/namelist.input.wrf.sh  $WRF_PATH/test/em_real/namelist.input.wrf.sh
+        chmod u+x ${WRF_PATH}/test/em_real/namelist.input.wrf.sh
+        ./namelist.input.wrf.sh ${NUM_METGRID_LEVELS} ${START_YEAR}-${START_MONTH}-${START_DAY}-${START_HOUR}  ${END_YEAR}-${END_MONTH}-${END_DAY}-${END_HOUR}  ${RUN_TIME_HOURS} ${GLOBAL_DATE_TIME_INTERVAL}
+        # First, save the status of execution
+        status=$?
+    fi
 
     # Backup the log file to the WRF output dir
     cp ${WRF_PATH}/test/em_real/namelist.input ${DIR_WRF_OUTPUT}  2>/dev/null
@@ -2087,7 +2103,6 @@ if [ x$USE_STATIC_NAMELIST_FILES == x"no" ]; then
     #    and to the WRF output data
     rm -f ${WRF_PATH}/run/namelist.input 2>/dev/null
     cp ${WRF_PATH}/test/em_real/namelist.input ${WRF_PATH}/run  2>/dev/null
-            
 
     mensagem "<<<<<<<  Generating ${WRF_PATH}/run/namelist.input --- ENDING"
 
