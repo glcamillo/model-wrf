@@ -234,8 +234,8 @@ cat << End_Of_Namelist > ./namelist.input
  max_dz                              = 1000.,
  auto_levels_opt                     = 2,
  dzbot                               = 50.,
- dzstretch_s                         = 1.3,
- dzstretch_u                         = 1.1,
+ dzstretch_s                         = 1.2,
+ dzstretch_u                         = 1.06,
 
  /
 
